@@ -1,18 +1,21 @@
 import fetch from "node-fetch";
 
-function formatUpdatedCookies(responseCookies, defaultCookies = '') {
-    const updatedCookies = responseCookies;
-    const formattedUpdatedCookies = updatedCookies
-        ? updatedCookies.split(", ").map(cookie => cookie.split(";")[0]).join("; ")
-        : defaultCookies;
+// Main function to log in
+async function main() {
+    console.time('MyCode');
 
-    return formattedUpdatedCookies;
+    const updatedCookies = await login();
+    const finalCookies = await login2(updatedCookies);
+
+    console.timeEnd('MyCode');
+
 }
 
-async function login(cookies) {
+
+async function login() {
     const data = {
-        timezone: "1",
-        skin: "sp",
+        //timezone: "1",
+        //skin: "sp",
         user2: "Rafael.Beckmann",
         user: "6078.Rafael.Beckmann",
         password: "RafaelBigFail5-",
@@ -38,49 +41,25 @@ async function login(cookies) {
         redirect: "follow" // Automatically follow redirects
     });
 
+    const updatedCookies = response.headers.get("set-cookie");
+    const formattedUpdatedCookies = formatUpdatedCookies(updatedCookies, "");
+
     console.log("Final URL:", response.url);
     console.log("Response status:", response.status, response.statusText);
-
+    //console.log("all headers: ", response.headers);
+    //console.log("all cookies: ", updatedCookies);
+    console.log("Updated cookies: ", formattedUpdatedCookies);
     //const responseText = await response.text();
     //console.log("Login response:", responseText.substring(0, 200));
-
-    const allSetCookies = response.headers.get("set-cookie");
-    console.log("all cookies: ", allSetCookies);
-    const formattedUpdatedCookies = formatUpdatedCookies(allSetCookies, cookies);
-    console.log("Updated cookies: ", formattedUpdatedCookies);
 
     return formattedUpdatedCookies;
 }
 
-// Main function to perform the login
-async function main() {
-    console.time('MyCode');
-
-    const updatedCookies = await login();
-
-    const updatedCookies2 = await login2(updatedCookies);
-
-    console.timeEnd('MyCode');
-
-}
-
-main().catch(err => console.error(err));
-
 
 async function login2(cookies) {
-    const data = {
-        timezone: "1",
-        skin: "sp",
-        user2: "Rafael.Beckmann",
-        user: "6078.Rafael.Beckmann",
-        password: "RafaelBigFail5-",
-        //saveUsername: "1", // From the form's checkbox (optional)
-        stayconnected: "1" // From the form's checkbox (vlt notwendig)
-    };
 
     // Send the GET request and follow redirects
     const response = await fetch("https://connect.schulportal.hessen.de/", {
-
         method: "GET",
         headers: {
             "Referer": "https://login.schulportal.hessen.de/?i=6078",
@@ -95,18 +74,25 @@ async function login2(cookies) {
         },
         redirect: "follow" // Automatically follow redirects
     });
-    console.log("Final URL:", response.url);
-    console.log("Response status:", response.status, response.statusText);
-    const responseText = await response.text();
 
-    // Extract updated cookies from the response
     const updatedCookies = response.headers.get("set-cookie");
     const formattedUpdatedCookies = formatUpdatedCookies(updatedCookies, cookies);
-    console.log("Updated cookies:", formattedUpdatedCookies);
 
+    console.log("Final URL:", response.url);
+    console.log("Response status:", response.status, response.statusText);
     //console.log("all headers: ", response.headers);
-
+    //console.log("all cookies: ", updatedCookies);
+    console.log("Updated cookies: ", formattedUpdatedCookies);
+    //const responseText = await response.text();
     //console.log("Login response:", responseText.substring(0, 200));
 
     return formattedUpdatedCookies;
 }
+
+
+function formatUpdatedCookies(responseCookies, defaultCookies = "") {
+    if (!responseCookies) return defaultCookies;
+    return responseCookies.split(", ").map(cookie => cookie.split(";")[0]).join("; ");
+}
+
+main().catch(err => console.error(err));
