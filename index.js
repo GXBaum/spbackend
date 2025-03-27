@@ -1,16 +1,72 @@
 import fetch from "node-fetch";
+import * as cheerio from "cheerio";
 
 // Main function to log in
 async function main() {
-    console.time('MyCode');
+    try {
+        console.time('Script');
 
-    const updatedCookies = await login();
-    const finalCookies = await login2(updatedCookies);
+        console.time('Login1');
+        const updatedCookies = await login();
+        console.timeEnd('Login1');
 
-    console.timeEnd('MyCode');
+        console.time('Login2');
+        const finalCookies = await login2(updatedCookies);
+        console.timeEnd('Login2');
 
+        console.time('GetMarks');
+        const marks = await getMarks(finalCookies);
+        console.timeEnd('GetMarks');
+
+        console.log("Marks found:", marks);
+
+        console.timeEnd('Script');
+    } catch (error) {
+        console.error("Error:", error);
+        console.timeEnd('Script'); // Ensure it still ends even on error
+    }
 }
 
+main();
+async function getMarks(cookies) {
+    //const url = "https://start.schulportal.hessen.de/meinunterricht.php?a=sus_view&id=5743#marks";
+
+    const url = "https://start.schulportal.hessen.de/meinunterricht.php?a=sus_view&id=5477&halb=1#marks";
+
+    const response = await fetch(url, {
+        method: "GET",
+        headers: {
+            "Cookie": cookies,
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.2 Safari/605.1.15",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Referer": "https://connect.schulportal.hessen.de/",
+        },
+        redirect: "follow"
+    });
+
+    if (response.status !== 200) {
+        throw new Error(`Failed to fetch marks page: ${response.status} ${response.statusText}`);
+    }
+
+    const html = await response.text();
+    const $ = cheerio.load(html);
+
+    // Array to store the marks data
+    const marks = [];
+
+    // Select the table rows from tbody within div#marks
+    $('#marks table.table tbody tr').each((i, row) => {
+        const $row = $(row);
+        const markData = {
+            name: $row.find('td').eq(0).text().trim(),
+            date: $row.find('td').eq(1).text().trim(),
+            grade: $row.find('td').eq(2).find('span.badge').text().trim()
+        };
+        marks.push(markData);
+    });
+
+    return marks;
+}
 
 async function login() {
     const data = {
@@ -95,4 +151,4 @@ function formatUpdatedCookies(responseCookies, defaultCookies = "") {
     return responseCookies.split(", ").map(cookie => cookie.split(";")[0]).join("; ");
 }
 
-main().catch(err => console.error(err));
+//main().catch(err => console.error(err));
