@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+.npm/
+npm-debug.log*
+
+# Environment variables
+.env
+.env.*
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# IDE - WebStorm
+.idea/*
+!.idea/.gitignore
+
+# Logs
+logs/
+*.log
+
+# macOS
+.DS_Store
+
+# Credentials and sensitive files
+*config.json
+*credentials*
