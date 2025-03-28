@@ -1,5 +1,9 @@
 import fetch from "node-fetch";
 import * as cheerio from "cheerio";
+import initDb from "./db.js";
+
+const db = initDb()
+let sql;
 
 const USER_AGENT = "";
 
@@ -16,14 +20,36 @@ async function main() {
         console.time("getCourses")
         const courses = await getCourses(loginCookies);
         console.log("Courses found:", courses);
+        for (const course of courses) {
+            sql = `Insert INTO courses (courseId, name, teachers) VALUES (?, ?, ?)`;
+
+            db.run(sql, [course.id, course.name, course.teachers.join(", ")], function(err) {
+                if (err) return console.error("Error inserting course:", err);
+                console.log(`Course inserted: ${course.name}, ID: ${this.lastID}`);
+            });
+        }
+
         console.timeEnd("getCourses");
 
         console.time("getMarks")
+
+
         for (const course of courses) {
-            let mark = await getMarks(loginCookies, course.id, 1)
-            console.log(mark)
+            const marks = await getMarks(loginCookies, course.id, 1);
+            console.log(`Inserting ${marks.length} marks for course: ${course.name}`);
+
+            // Insert each mark into the database
+            for (const mark of marks) {
+                sql = `Insert INTO marks (name, date, grade, courseId, SpUsername) VALUES (?, ?, ?, ?, ?)`;
+
+                db.run(sql, [mark.name, mark.date, mark.grade, course.id, "Rafael.Beckmann"], function(err) {
+                    if (err) return console.error("Error inserting mark:", err);
+                    console.log(`Mark inserted: ${mark.name}, ID: ${this.lastID}`);
+                });
+            }
         }
         console.timeEnd("getMarks")
+
 
 
         console.timeEnd('Script');
