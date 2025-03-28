@@ -1,18 +1,30 @@
 import fetch from "node-fetch";
 import * as cheerio from "cheerio";
 
+const USER_AGENT = "";
+
 // Main function to log in
 async function main() {
     try {
         console.time('Script');
 
-        const finalCookies = await getLoginCookies("Rafael.Beckmann", "RafaelBigFail5-", 6078);
+        console.time('Login');
+        const loginCookies = await getLoginCookies("Rafael.Beckmann", "RafaelBigFail5-", 6078);
+        console.timeEnd('Login');
 
-        console.time('GetMarks');
-        const marks = await getMarks(finalCookies, 5743, );
-        console.timeEnd('GetMarks');
 
-        console.log("Marks found:", marks);
+        console.time("getCourses")
+        const courses = await getCourses(loginCookies);
+        console.log("Courses found:", courses);
+        console.timeEnd("getCourses");
+
+        console.time("getMarks")
+        for (const course of courses) {
+            let mark = await getMarks(loginCookies, course.id, 1)
+            console.log(mark)
+        }
+        console.timeEnd("getMarks")
+
 
         console.timeEnd('Script');
     } catch (error) {
@@ -56,8 +68,6 @@ async function getLoginCookies(username, password, schoolId = 6078) {
  * @param {number} [halb] - Optional: Semester number (1 or 2)
  */
 async function getMarks(cookies, id, halb) {
-    //const url = "https://start.schulportal.hessen.de/meinunterricht.php?a=sus_view&id=5743";
-    //const url = "https://start.schulportal.hessen.de/meinunterricht.php?a=sus_view&id=5477&halb=1";
     const URL = `https://start.schulportal.hessen.de/meinunterricht.php?a=sus_view&id=${id}&halb=${halb}`;
 
     const response = await fetch(URL, {
@@ -94,6 +104,68 @@ async function getMarks(cookies, id, halb) {
 
     return marks;
 }
+
+async function getCourses(cookies) {
+    const URL = "https://start.schulportal.hessen.de/meinunterricht.php#anwesend"
+
+    const response = await fetch(URL, {
+        method: "GET",
+        headers: {
+            "Cookie": cookies,
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.2 Safari/605.1.15",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Referer": "https://connect.schulportal.hessen.de/",
+        },
+        redirect: "follow"
+    });
+
+    if (response.status !== 200) {
+        throw new Error(`Failed to fetch marks page: ${response.status} ${response.statusText}`);
+    }
+
+    const html = await response.text();
+    const $ = cheerio.load(html);
+
+    // Array to store the courses
+    const courses = [];
+
+    // Select all rows from the table in the "anwesend" tab
+    $("#anwesend table.table tbody tr").each( (i, row) => {
+        const $row = $(row);
+
+        // Extract course information from the first cell
+        const $courseCell = $row.find('td').first();
+        const $courseLink = $courseCell.find('a');
+
+        // Parse course information
+        const course = {
+            name: $courseLink.text().trim(),
+            //link: $courseLink.attr('href'),
+            id: extractIdFromHref($courseLink.attr('href')),
+            teachers: []
+        };
+
+        // Extract teacher information from the second cell
+        $row.find('td').eq(1).find('span.label').each((j, teacherSpan) => {
+            const teacherText = $(teacherSpan).attr('title');
+            if (teacherText) {
+                course.teachers.push(teacherText);
+            }
+        });
+
+        courses.push(course);
+    });
+
+    // Helper function to extract ID from href
+    function extractIdFromHref(href) {
+        if (!href) return null;
+        const match = href.match(/id=(\d+)/);
+        return match ? parseInt(match[1]) : null;
+    }
+
+    return courses;
+}
+
 
 async function loginGetSPHSessionCookie(username, password, schoolId) {
     /*const data = {
