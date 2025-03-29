@@ -1,6 +1,7 @@
 import fetch from "node-fetch";
 import * as cheerio from "cheerio";
-import initDb from "./db.js";
+import { initDb, resetDb } from './db.js';
+resetDb()
 
 const db = initDb()
 let sql;
@@ -10,6 +11,7 @@ const USER_AGENT = "";
 // Main function to log in
 async function main() {
     try {
+
         console.time('Script');
 
         console.time('Login');
@@ -21,9 +23,9 @@ async function main() {
         const courses = await getCourses(loginCookies);
         console.log("Courses found:", courses);
         for (const course of courses) {
-            sql = `Insert INTO courses (courseId, name, teachers) VALUES (?, ?, ?)`;
+            sql = `Insert INTO courses (courseId, name) VALUES (?, ?)`;
 
-            db.run(sql, [course.id, course.name, course.teachers.join(", ")], function(err) {
+            db.run(sql, [course.id, course.name], function(err) {
                 if (err) return console.error("Error inserting course:", err);
                 console.log(`Course inserted: ${course.name}, ID: ${this.lastID}`);
             });
@@ -49,6 +51,20 @@ async function main() {
             }
         }
         console.timeEnd("getMarks")
+
+        console.time("getTeachers")
+        const teachers = await getTeachers(loginCookies);
+        console.log("Teachers found:", teachers);
+
+        for (const teacher of teachers) {
+            sql = `Insert INTO teachers (name, type, teacherId, logo, abbreviation, email) VALUES (?, ?, ?, ?, ?, ?)`;
+
+            db.run(sql, [teacher.text, teacher.type, teacher.id, teacher.logo, teacher.abbreviation, teacher.email], function(err) {
+                if (err) return console.error("Error inserting teacher:", err);
+                console.log(`Teacher inserted: ${teacher.text}, ID: ${this.lastID}`);
+            });
+        }
+        console.timeEnd("getTeachers");
 
 
 
@@ -85,6 +101,72 @@ async function getLoginCookies(username, password, schoolId = 6078) {
 
     return finalCookiesWithSid;
 }
+
+async function getTeachers(cookies) {
+    const URL = "https://start.schulportal.hessen.de/meinunterricht.php";
+
+    const response = await fetch(URL, {
+        method: "GET",
+        headers: {
+            "Cookie": cookies,
+            "User-Agent": USER_AGENT,
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Referer": "https://connect.schulportal.hessen.de/",
+        },
+        redirect: "follow"
+    });
+
+    if (response.status !== 200) {
+        throw new Error(`Failed to fetch teachers: ${response.status} ${response.statusText}`);
+    }
+
+    const html = await response.text();
+    const $ = cheerio.load(html);
+
+    let teachers = [];
+
+    // Find all teacher buttons in the dropdown
+    $(".btn-group").each((i, btnGroup) => {
+        const $btnGroup = $(btnGroup);
+        const $button = $btnGroup.find('button.btn-xs');
+
+        // Skip if this isn't a teacher button
+        if (!$button.length || !$button.attr('title')) return;
+
+        const title = $button.attr('title');
+        const abbreviation = $button.text().trim().replace(/\s.*$/, ''); // Get the abbreviation (like "Ld")
+
+        // Get name from title attribute (e.g., "Landsbeck, Toni (Ld)")
+        const nameMatch = title.match(/(.*?)\s+\(.*?\)/);
+        const name = nameMatch ? nameMatch[1] : title;
+
+        // Find the encoded ID in the "Nachricht schreiben" link
+        const $messageLink = $btnGroup.find('a[href^="nachrichten.php?to[]"]');
+        const encodedId = $messageLink.length ?
+            $messageLink.attr('href').match(/to\[]=(.*?)}/)?.[1] : null;
+        const decodedId = encodedId ? Buffer.from(encodedId, 'base64').toString() : null;
+
+        // Find the email address
+        const $emailLink = $btnGroup.find('a[href^="mailto:"]');
+        const email = $emailLink.length ? $emailLink.attr('href').replace('mailto: ', '') : null;
+
+        const teacher = {
+            type: "lul", // Assuming this is a constant value
+            id: decodedId,
+            logo: "fa fa-user", // Using the example value
+            text: name,
+            abbreviation: abbreviation,
+            email: email
+        };
+
+        teachers.push(teacher);
+    });
+
+    return teachers;
+}
+
+
+
 
 
 /**
