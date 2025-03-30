@@ -1,4 +1,6 @@
-import sqlite3 from "sqlite3";
+// just rename to sqlite3 and remove const to remove verbose
+import sql3 from "sqlite3";
+const sqlite3 = sql3.verbose();
 
 // Database path
 const DB_PATH = "./databasetest.db";
@@ -54,15 +56,25 @@ async function initTables(db) {
             );
 
             db.run(
+                `CREATE TABLE IF NOT EXISTS userCourses (
+                                                            SpUsername TEXT,
+                                                            courseId INTEGER,
+                                                            PRIMARY KEY(SpUsername, courseId),
+                                                            FOREIGN KEY(SpUsername) REFERENCES users(SpUsername),
+                                                            FOREIGN KEY(courseId) REFERENCES courses(courseId)
+                 )`,
+            );
+
+            db.run(
                 `CREATE TABLE IF NOT EXISTS marks (
           markId INTEGER PRIMARY KEY,
           name TEXT,
           date TEXT,
           grade TEXT,
           courseId INTEGER,
-          /*SpUsername TEXT,*/
-          FOREIGN KEY(courseId) REFERENCES courses(courseId)
-          /*FOREIGN KEY(SpUsername) REFERENCES users(SpUsername)*/
+          SpUsername TEXT,
+          FOREIGN KEY(courseId) REFERENCES courses(courseId),
+          FOREIGN KEY(SpUsername) REFERENCES users(SpUsername)
         )`
             );
 
@@ -85,6 +97,7 @@ async function initTables(db) {
           FOREIGN KEY(courseId) REFERENCES courses(courseId),
           FOREIGN KEY(teacherId) REFERENCES teachers(teacherId)
         )`,
+
                 (err) => {
                     if (err) {
                         console.error("Error initializing tables:", err);
@@ -108,6 +121,7 @@ async function resetDb() {
 
             db.run("DROP TABLE IF EXISTS coursesTeachers");
             db.run("DROP TABLE IF EXISTS marks");
+            db.run("DROP TABLE IF EXISTS userCourses");
             db.run("DROP TABLE IF EXISTS teachers");
             db.run("DROP TABLE IF EXISTS courses");
             db.run("DROP TABLE IF EXISTS users");
@@ -129,6 +143,25 @@ async function resetDb() {
 
 // Database operations
 const db = {
+
+    async insertUser(spUsername, spPassword) {
+        const dbConn = await getDb();
+        return new Promise((resolve, reject) => {
+            dbConn.run(
+                "INSERT OR REPLACE INTO users (SpUsername, SpPassword) VALUES (?, ?)",
+                [spUsername, spPassword],
+                function (err) {
+                    if (err) {
+                        console.error("Error inserting user:", err);
+                        reject(err);
+                    } else {
+                        resolve(this.lastID);
+                    }
+                }
+            );
+        });
+    },
+
     async insertCourse(course) {
         const dbConn = await getDb();
         return new Promise((resolve, reject) => {
@@ -151,8 +184,8 @@ const db = {
         const dbConn = await getDb();
         return new Promise((resolve, reject) => {
             dbConn.run(
-                "INSERT INTO marks (name, date, grade, courseId/*, SpUsername*/) VALUES (?, ?, ?, ?/*, ?*/)",
-                [mark.name, mark.date, mark.grade, mark.courseId/*, mark.username*/],
+                "INSERT INTO marks (name, date, grade, courseId, SpUsername) VALUES (?, ?, ?, ?, ?)",
+                [mark.name, mark.date, mark.grade, mark.courseId, mark.SpUsername],
                 function (err) {
                     if (err) {
                         console.error("Error inserting mark:", err);
@@ -199,6 +232,24 @@ const db = {
                 (err) => {
                     if (err) {
                         console.error("Error inserting course-teacher relationship:", err);
+                        reject(err);
+                    } else {
+                        resolve(true);
+                    }
+                }
+            );
+        });
+    },
+
+    async insertUserCourse(SpUsername, courseId) {
+        const dbConn = await getDb();
+        return new Promise((resolve, reject) => {
+            dbConn.run(
+                "INSERT OR REPLACE INTO userCourses (SpUsername, courseId) VALUES (?, ?)",
+                [SpUsername, courseId],
+                (err) => {
+                    if (err) {
+                        console.error("Error inserting user-course relationship:", err);
                         reject(err);
                     } else {
                         resolve(true);

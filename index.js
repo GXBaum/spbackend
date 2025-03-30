@@ -13,6 +13,8 @@ async function main() {
     try {
         console.time('Script');
 
+        await db.insertUser("Rafael.Beckmann", "RafaelBigFail5-");
+
         console.time('Login');
         const loginCookies = await getLoginCookies("Rafael.Beckmann", "RafaelBigFail5-", 6078);
         console.timeEnd('Login');
@@ -22,33 +24,25 @@ async function main() {
         for (const course of courses) {
             await db.insertCourse({ id: course.id, name: course.name }); // Use db.insertCourse
         }
-        console.log(`Inserted ${courses.length} courses`);
         console.timeEnd("getCourses");
+
+        //new
+        await db.insertUserCourse("Rafael.Beckmann", 5349)
+
 
         console.time("getMarks");
         for (const course of courses) {
             const marks = await getMarks(loginCookies, course.id, 1);
             for (const mark of marks) {
-
-                console.log({
-                    name: mark.name,
-                    date: mark.date,
-                    grade: mark.grade,
-                    courseId: course.id,
-                    username: "Rafael.Beckmann"
-                });
-
-
                 await db.insertMark({
                     name: mark.name,
                     date: mark.date,
                     grade: mark.grade,
                     courseId: course.id,
-                    //username: "Rafael.Beckmann"
-                }); // Use db.insertMark
+                    SpUsername: "Rafael.Beckmann"
+                });
             }
         }
-        console.log(`Inserted marks for ${courses.length} courses`);
         console.timeEnd("getMarks");
 
         console.time("getTeachers");
@@ -59,19 +53,18 @@ async function main() {
         for (const teacher of teachers) {
             await db.insertTeacher({
                 id: teacher.id,
-                name: teacher.text, // Adjusted to match the expected property name
+                name: teacher.text,
                 type: teacher.type,
                 logo: teacher.logo,
                 abbreviation: teacher.abbreviation,
                 email: teacher.email
-            }); // Use db.insertTeacher
+            });
         }
-        console.log(`Inserted ${teachers.length} teachers`);
-
         for (const relation of coursesTeachers) {
             await db.insertCourseTeacher(relation.courseId, relation.teacherId); // Use db.insertCourseTeacher
         }
         console.timeEnd("getTeachers");
+
 
         console.timeEnd('Script');
     } catch (error) {
