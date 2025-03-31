@@ -3,7 +3,7 @@ import sql3 from "sqlite3";
 const sqlite3 = sql3.verbose();
 
 // Database path
-const DB_PATH = "./databasetest.db";
+const DB_PATH = "./db/databasetest.db";
 
 // Singleton database connection
 let dbInstance = null;
