@@ -1,15 +1,19 @@
-import fetch from "node-fetch";
-import * as cheerio from "cheerio";
 import { getDb, resetDb, db } from './db/db.js';
 import {getLoginCookies} from "./services/auth.js";
 import {getCourses} from "./services/courses.js";
 import {getMarks} from "./services/marks.js";
 import {sendNotification} from "./services/notifications.js";
-import {getTeachers} from "./services/teachers.js"; // Updated import to use the combined version
+import {getTeachers} from "./services/teachers.js";
+//import * as express from "express";
+import express from "express";
+import apiRoutes from "./routes/api.js";
 
-//var admin = require("firebase-admin");
-//var serviceAccount = require("./hvk-client-firebase-adminsdk-fbsvc-7b316feac0.json");
 
+const app = express();
+const PORT = process.env.PORT || 6000;
+
+app.use(express.json());
+app.use("/api", apiRoutes);
 
 // TODO: DB GETS RESET EVERY TIME THE SCRIPT RUNS
 // WARNING: This will delete all database tables and recreate them
@@ -87,17 +91,39 @@ async function main() {
         await db.close(); // Close the database connection when done
     }
 }
-main();
+//main();
 
-//sendNotification("The server sent this", "this is insanely cool", "high", "d_hKZLjIRfe0OilqweAFre:APA91bG_M53-057Lb5bFrg6aSB4fA8pVDZfhV1a_cthGzn1StqIsx8lsw8h2ExtTPA7WxGP1w1ZePywtgpClSKLTas-bi0bLIpOZ5fssZ55ULx21Gi3Obwk");
-//sendNotification("The server sent this", "this is insanely cool", "low", "el85NA-0SK6fPLl0UW0MRG:APA91bGuFNNYY797OM1NFXwMRzxjMkHYPM7t9oyZFpaGIIpJ1xpViY0ymqoV9MAUYldqCGOynZBA42_atzfmZZUOzTr4XMTAmqwuPrWm6c3a5oV2heUIbjY");
+async function startServer() {
+    try {
+        await getDb(); // Initialize the database
+        const server = app.listen(PORT, () => {
+            console.log(`Server running on port ${PORT}`);
+            // Optional: Send a notification once the server is up
+            sendNotification(
+                "The server sent this",
+                "this is insanely cool",
+                "high",
+                "d_hKZLjIRfe0OilqweAFre:APA91bG_M53-057Lb5bFrg6aSB4fA8pVDZfhV1a_cthGzn1StqIsx8lsw8h2ExtTPA7WxGP1w1ZePywtgpClSKLTas-bi0bLIpOZ5fssZ55ULx21Gi3Obwk"
+            ).then(() => console.log("Notification sent"))
+                .catch(err => console.error("Notification error:", err));
+        });
 
+        // Handle server errors to prevent crashes
+        server.on('error', (err) => {
+            console.error("Server error:", err);
+            process.exit(1);
+        });
 
+    } catch (error) {
+        console.error("Failed to start server:", error);
+        process.exit(1);
+    }
+}
 
+startServer();
 
-
-
-
-
-
-
+process.on("SIGTERM", async () => {
+    console.log("SIGTERM received, closing server...");
+    await db.close();
+    process.exit(0);
+});

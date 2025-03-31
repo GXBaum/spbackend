@@ -25,6 +25,8 @@ function sendNotification(title, message, priority, token) {
 
 }
 */
+
+import admin from "../config/firebase.js";
 export function sendNotification(title, message, priority, token) {
     // Create the message payload
     const payload = {
