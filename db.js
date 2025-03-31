@@ -179,6 +179,24 @@ const db = {
             );
         });
     },
+    async deleteAllMarks(SpUsername, courseId) {
+        const dbConn = await getDb();
+        return new Promise((resolve, reject) => {
+            dbConn.run(
+                "DELETE FROM marks WHERE SpUsername = ?",
+                [SpUsername],
+                function (err) {
+                    if (err) {
+                        console.error("Error deleting existing marks:", err);
+                        reject(err);
+                    } else {
+                        console.log("Existing marks deleted successfully.");
+                        resolve(this.lastID);
+                    }
+                }
+            );
+        });
+    },
 
     async insertMark(mark) {
         const dbConn = await getDb();

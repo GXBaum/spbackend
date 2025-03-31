@@ -2,9 +2,17 @@ import fetch from "node-fetch";
 import * as cheerio from "cheerio";
 import { getDb, resetDb, db } from './db.js'; // Updated import to use the combined version
 
+//var admin = require("firebase-admin");
+//var serviceAccount = require("./hvk-client-firebase-adminsdk-fbsvc-7b316feac0.json");
+import admin from "firebase-admin";
+import serviceAccount from "./hvk-client-firebase-adminsdk-fbsvc-7b316feac0.json" assert { type: "json" };
+admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount)
+});
+
 // TODO: DB GETS RESET EVERY TIME THE SCRIPT RUNS
 // WARNING: This will delete all database tables and recreate them
-await resetDb();
+//await resetDb();
 
 const USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.2 Safari/605.1.15";
 
@@ -31,8 +39,12 @@ async function main() {
 
 
         console.time("getMarks");
+
+        console.log(await db.deleteAllMarks("Rafael.Beckmann"));
+
         for (const course of courses) {
             const marks = await getMarks(loginCookies, course.id, 1);
+
             for (const mark of marks) {
                 await db.insertMark({
                     name: mark.name,
@@ -67,6 +79,7 @@ async function main() {
 
 
         console.timeEnd('Script');
+
     } catch (error) {
         console.error("Error:", error);
         console.timeEnd('Script'); // Ensure it still ends even on error
@@ -74,8 +87,88 @@ async function main() {
         await db.close(); // Close the database connection when done
     }
 }
-main();
+//main();
 
+sendNotification("The server sent this", "this is insanely cool", "high", "d_hKZLjIRfe0OilqweAFre:APA91bG_M53-057Lb5bFrg6aSB4fA8pVDZfhV1a_cthGzn1StqIsx8lsw8h2ExtTPA7WxGP1w1ZePywtgpClSKLTas-bi0bLIpOZ5fssZ55ULx21Gi3Obwk");
+//sendNotification("The server sent this", "this is insanely cool", "low", "el85NA-0SK6fPLl0UW0MRG:APA91bGuFNNYY797OM1NFXwMRzxjMkHYPM7t9oyZFpaGIIpJ1xpViY0ymqoV9MAUYldqCGOynZBA42_atzfmZZUOzTr4XMTAmqwuPrWm6c3a5oV2heUIbjY");
+
+/*
+function sendNotification(title, message, priority, token) {
+    // Create the message payload
+    const payload = {
+        notification: {
+            title: title,
+            body: message
+        },
+        android: {
+            priority: priority
+        },
+        token: token
+    };
+
+    // Send the message
+    return admin.messaging().send(payload)
+        .then(response => {
+            console.log('Successfully sent notification:', response);
+            return response;
+        })
+        .catch(error => {
+            console.error('Error sending notification:', error);
+            throw error;
+        });
+
+}
+*/
+function sendNotification(title, message, priority, token) {
+    // Create the message payload
+    const payload = {
+        notification: {
+            title: title,
+            body: message,
+            // Add these for better visibility
+        },
+        android: {
+            priority: priority,
+            // Add notification specifics for Android
+            notification: {
+                channel_id: "chat",
+                notification_priority: "PRIORITY_HIGH",
+                visibility: "PUBLIC",
+                default_sound: true,
+                default_vibrate_timings: true
+            }
+        },
+        // Set content_available for iOS
+        apns: {
+            headers: {
+                "apns-priority": "10"
+            },
+            payload: {
+                aps: {
+                    alert: {
+                        title: title,
+                        body: message
+                    },
+                    sound: "default",
+                    badge: 1,
+                    content_available: true
+                }
+            }
+        },
+        token: token
+    };
+
+    // Send the message
+    return admin.messaging().send(payload)
+        .then(response => {
+            console.log('Successfully sent notification:', response);
+            return response;
+        })
+        .catch(error => {
+            console.error('Error sending notification:', error);
+            throw error;
+        });
+}
 
 
 /**
