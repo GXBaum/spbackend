@@ -1,74 +1,82 @@
-// just rename to sqlite3 and remove const to remove verbose
+// Import SQLite with verbose mode
 import sql3 from "sqlite3";
 const sqlite3 = sql3.verbose();
 
-// Database path
+// Database constants
 const DB_PATH = "./db/databasetest.db";
+const TABLES = {
+  USERS: "users",
+  COURSES: "courses",
+  USER_COURSES: "userCourses",
+  MARKS: "marks",
+  TEACHERS: "teachers",
+  COURSES_TEACHERS: "coursesTeachers",
+  USER_NOTIFICATION_TOKENS: "userNotificationTokens"
+};
 
 // Singleton database connection
 let dbInstance = null;
 
 // Initialize and get database instance
 async function getDb() {
-    if (!dbInstance) {
-        dbInstance = new sqlite3.Database(
-            DB_PATH,
-            sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE,
-            (err) => {
-                if (err) {
-                    console.error("Error opening database:", err);
-                } else {
-                    console.log("Connected to the database.");
-                }
-            }
-        );
+  if (!dbInstance) {
+    dbInstance = new sqlite3.Database(
+      DB_PATH,
+      sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE,
+      (err) => {
+        if (err) {
+          console.error("Error opening database:", err);
+        } else {
+          console.log("Connected to the database.");
+        }
+      }
+    );
 
-        // Enable foreign keys
-        await new Promise((resolve, reject) => {
-            dbInstance.run("PRAGMA foreign_keys = ON", (err) => {
-                if (err) reject(err);
-                else resolve();
-            });
-        });
+    // Enable foreign keys
+    await new Promise((resolve, reject) => {
+      dbInstance.run("PRAGMA foreign_keys = ON", (err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
 
-        // Initialize tables
-        await initTables(dbInstance);
-    }
-    return dbInstance;
+    // Initialize tables
+    await initTables(dbInstance);
+  }
+  return dbInstance;
 }
 
 // Initialize tables
 async function initTables(db) {
-    return new Promise((resolve, reject) => {
-        db.serialize(() => {
-            db.run(
-                `CREATE TABLE IF NOT EXISTS users (
+  return new Promise((resolve, reject) => {
+    db.serialize(() => {
+      db.run(
+        `CREATE TABLE IF NOT EXISTS ${TABLES.USERS} (
           sp_username TEXT PRIMARY KEY,
           sp_password TEXT,
           is_notifications_enabled INTEGER DEFAULT 0
+        )`
+      );
 
-                 )`
-            );
-
-            db.run(
-                `CREATE TABLE IF NOT EXISTS courses (
+      db.run(
+        `CREATE TABLE IF NOT EXISTS ${TABLES.COURSES} (
           course_id INTEGER PRIMARY KEY,
           name TEXT
         )`
-            );
+      );
 
-            db.run(
-                `CREATE TABLE IF NOT EXISTS userCourses (
-                                                            sp_username TEXT,
-                                                            course_id INTEGER,
-                                                            PRIMARY KEY(sp_username, course_id),
-                                                            FOREIGN KEY(sp_username) REFERENCES users(sp_username),
-                                                            FOREIGN KEY(course_id) REFERENCES courses(course_id)
-                 )`,
-            );
+      db.run(
+        `CREATE TABLE IF NOT EXISTS ${TABLES.USER_COURSES} (
+          sp_username TEXT,
+          course_id INTEGER,
+          PRIMARY KEY(sp_username, course_id),
+          FOREIGN KEY(sp_username) REFERENCES ${TABLES.USERS}(sp_username),
+          FOREIGN KEY(course_id) REFERENCES ${TABLES.COURSES}(course_id)
+        )`
+      );
 
-            db.run(
-                `CREATE TABLE IF NOT EXISTS marks (
+      db.run(
+        `CREATE TABLE IF NOT EXISTS ${TABLES.MARKS} (
           mark_id INTEGER PRIMARY KEY,
           name TEXT,
           date TEXT,
@@ -76,300 +84,252 @@ async function initTables(db) {
           course_id INTEGER,
           sp_username TEXT,
           half_year INTEGER,
-          FOREIGN KEY(course_id) REFERENCES courses(course_id),
-          FOREIGN KEY(sp_username) REFERENCES users(sp_username)
-        )`);
+          FOREIGN KEY(course_id) REFERENCES ${TABLES.COURSES}(course_id),
+          FOREIGN KEY(sp_username) REFERENCES ${TABLES.USERS}(sp_username)
+        )`
+      );
 
-            db.run(
-                `CREATE TABLE IF NOT EXISTS teachers (
+      db.run(
+        `CREATE TABLE IF NOT EXISTS ${TABLES.TEACHERS} (
           teacher_id TEXT PRIMARY KEY,
           name TEXT,
           type TEXT,
           logo TEXT,
           abbreviation TEXT,
           email TEXT
-        )`);
+        )`
+      );
 
-            db.run(
-                `CREATE TABLE IF NOT EXISTS coursesTeachers (
+      db.run(
+        `CREATE TABLE IF NOT EXISTS ${TABLES.COURSES_TEACHERS} (
           course_id INTEGER,
           teacher_id TEXT,
           PRIMARY KEY(course_id, teacher_id),
-          FOREIGN KEY(course_id) REFERENCES courses(course_id),
-          FOREIGN KEY(teacher_id) REFERENCES teachers(teacher_id)
-        )`,);
+          FOREIGN KEY(course_id) REFERENCES ${TABLES.COURSES}(course_id),
+          FOREIGN KEY(teacher_id) REFERENCES ${TABLES.TEACHERS}(teacher_id)
+        )`
+      );
 
-            db.run(
-                    `CREATE TABLE IF NOT EXISTS userNotificationTokens (
-            sp_username TEXT,
-            token TEXT,
-            PRIMARY KEY(sp_username),
-            FOREIGN KEY(sp_username) REFERENCES users(sp_username)
+      db.run(
+        `CREATE TABLE IF NOT EXISTS ${TABLES.USER_NOTIFICATION_TOKENS} (
+          sp_username TEXT,
+          token TEXT,
+          PRIMARY KEY(sp_username),
+          FOREIGN KEY(sp_username) REFERENCES ${TABLES.USERS}(sp_username)
         )`,
-
-                (err) => {
-                    if (err) {
-                        console.error("Error initializing tables:", err);
-                        reject(err);
-                    } else {
-                        console.log("All tables initialized successfully.");
-                        resolve();
-                    }
-                }
-            );
-        });
+        (err) => {
+          if (err) {
+            console.error("Error initializing tables:", err);
+            reject(err);
+          } else {
+            console.log("All tables initialized successfully.");
+            resolve();
+          }
+        }
+      );
     });
+  });
 }
 
 // Reset database
 async function resetDb() {
-    const db = await getDb();
-    return new Promise((resolve, reject) => {
-        db.serialize(() => {
-            db.run("PRAGMA foreign_keys = OFF");
+  const db = await getDb();
+  return new Promise((resolve, reject) => {
+    db.serialize(() => {
+      db.run("PRAGMA foreign_keys = OFF");
 
-            db.run("DROP TABLE IF EXISTS coursesTeachers");
-            db.run("DROP TABLE IF EXISTS marks");
-            db.run("DROP TABLE IF EXISTS userCourses");
-            db.run("DROP TABLE IF EXISTS teachers");
-            db.run("DROP TABLE IF EXISTS courses");
-            db.run("DROP TABLE IF EXISTS users");
-            db.run("DROP TABLE IF EXISTS userNotificationTokens")
+      db.run(`DROP TABLE IF EXISTS ${TABLES.COURSES_TEACHERS}`);
+      db.run(`DROP TABLE IF EXISTS ${TABLES.MARKS}`);
+      db.run(`DROP TABLE IF EXISTS ${TABLES.USER_COURSES}`);
+      db.run(`DROP TABLE IF EXISTS ${TABLES.TEACHERS}`);
+      db.run(`DROP TABLE IF EXISTS ${TABLES.COURSES}`);
+      db.run(`DROP TABLE IF EXISTS ${TABLES.USERS}`);
+      db.run(`DROP TABLE IF EXISTS ${TABLES.USER_NOTIFICATION_TOKENS}`);
 
-
-            db.run("PRAGMA foreign_keys = ON", (err) => {
-                if (err) {
-                    console.error("Error resetting database:", err);
-                    reject(err);
-                } else {
-                    console.log("All tables dropped successfully.");
-                    initTables(db)
-                        .then(() => resolve(true))
-                        .catch(reject);
-                }
-            });
-        });
+      db.run("PRAGMA foreign_keys = ON", (err) => {
+        if (err) {
+          console.error("Error resetting database:", err);
+          reject(err);
+        } else {
+          console.log("All tables dropped successfully.");
+          initTables(db)
+            .then(() => resolve(true))
+            .catch(reject);
+        }
+      });
     });
+  });
 }
 
-// Database operations
+// Helper function for db operations
+const runQuery = async (query, params = []) => {
+  const dbConn = await getDb();
+  return new Promise((resolve, reject) => {
+    dbConn.run(query, params, function(err) {
+      if (err) {
+        console.error(`Error executing query: ${query}`, err);
+        reject(err);
+      } else {
+        resolve({ lastID: this.lastID, changes: this.changes });
+      }
+    });
+  });
+};
+
+// Helper for get queries
+const getQuery = async (query, params = []) => {
+  const dbConn = await getDb();
+  return new Promise((resolve, reject) => {
+    dbConn.get(query, params, (err, row) => {
+      if (err) {
+        console.error(`Error executing get query: ${query}`, err);
+        reject(err);
+      } else {
+        resolve(row);
+      }
+    });
+  });
+};
+
+// Helper for all queries
+const allQuery = async (query, params = []) => {
+  const dbConn = await getDb();
+  return new Promise((resolve, reject) => {
+    dbConn.all(query, params, (err, rows) => {
+      if (err) {
+        console.error(`Error executing all query: ${query}`, err);
+        reject(err);
+      } else {
+        resolve(rows);
+      }
+    });
+  });
+};
+
+// Database operations object
 const db = {
+  async insertUser(spUsername, spPassword, isNotificationsEnabled = 0) {
+    const result = await runQuery(
+      `INSERT OR REPLACE INTO ${TABLES.USERS} (sp_username, sp_password, is_notifications_enabled) 
+       VALUES (?, ?, ?)`,
+      [spUsername, spPassword, isNotificationsEnabled]
+    );
+    return result.lastID;
+  },
 
-    async insertUser(spUsername, spPassword, isNotificationsEnabled = 0) {
-        const dbConn = await getDb();
-        return new Promise((resolve, reject) => {
-            dbConn.run(
-                "INSERT OR REPLACE INTO users (sp_username, sp_password, is_notifications_enabled) VALUES (?, ?, ?)",
-                [spUsername, spPassword, isNotificationsEnabled],
-                function (err) {
-                    if (err) {
-                        console.error("Error inserting user:", err);
-                        reject(err);
-                    } else {
-                        resolve(this.lastID);
-                    }
-                }
-            );
+  async getAllUsers() {
+    return await allQuery(`SELECT * FROM ${TABLES.USERS}`);
+  },
+
+  async insertCourse(course) {
+    const result = await runQuery(
+      `INSERT OR REPLACE INTO ${TABLES.COURSES} (course_id, name) 
+       VALUES (?, ?)`,
+      [course.id, course.name]
+    );
+    return result.lastID;
+  },
+
+  async deleteAllMarksOfHalfYear(SpUsername, halfYear) {
+    const result = await runQuery(
+      `DELETE FROM ${TABLES.MARKS} WHERE sp_username = ? AND half_year = ?`,
+      [SpUsername, halfYear]
+    );
+    console.log("Existing marks deleted successfully.");
+    return result.changes;
+  },
+
+  async insertMark(mark) {
+    const result = await runQuery(
+      `INSERT INTO ${TABLES.MARKS} (name, date, grade, course_id, sp_username, half_year) 
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [mark.name, mark.date, mark.grade, mark.courseId, mark.SpUsername, mark.halfYear]
+    );
+    return result.lastID;
+  },
+
+  async insertTeacher(teacher) {
+    const result = await runQuery(
+      `INSERT OR REPLACE INTO ${TABLES.TEACHERS} 
+       (teacher_id, name, type, logo, abbreviation, email) 
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [
+        teacher.id,
+        teacher.name,
+        teacher.type,
+        teacher.logo,
+        teacher.abbreviation,
+        teacher.email,
+      ]
+    );
+    return result.lastID;
+  },
+
+  async insertCourseTeacher(courseId, teacherId) {
+    await runQuery(
+      `INSERT OR REPLACE INTO ${TABLES.COURSES_TEACHERS} (course_id, teacher_id) 
+       VALUES (?, ?)`,
+      [courseId, teacherId]
+    );
+    return true;
+  },
+
+  async insertUserCourse(SpUsername, courseId) {
+    await runQuery(
+      `INSERT OR REPLACE INTO ${TABLES.USER_COURSES} (sp_username, course_id) 
+       VALUES (?, ?)`,
+      [SpUsername, courseId]
+    );
+    return true;
+  },
+
+  async insertUserNotificationToken(SpUsername, token) {
+    await runQuery(
+      `INSERT OR REPLACE INTO ${TABLES.USER_NOTIFICATION_TOKENS} (sp_username, token) 
+       VALUES (?, ?)`,
+      [SpUsername, token]
+    );
+    return true;
+  },
+
+  async getUserNotificationToken(SpUsername) {
+    const row = await getQuery(
+      `SELECT token FROM ${TABLES.USER_NOTIFICATION_TOKENS} WHERE sp_username = ?`,
+      [SpUsername]
+    );
+    return row ? row.token : null;
+  },
+
+  async getUserGrades(SpUsername) {
+    // Check total records first for debugging
+    const countResult = await getQuery(`SELECT COUNT(*) as count FROM ${TABLES.MARKS}`);
+    console.log(`Total records in marks table: ${countResult.count}`);
+
+    // Get the user's grades
+    const rows = await allQuery(
+      `SELECT * FROM ${TABLES.MARKS} WHERE sp_username = ?`,
+      [SpUsername]
+    );
+    console.log(`Found ${rows.length} grades for user ${SpUsername}`);
+    return rows;
+  },
+
+  async close() {
+    if (dbInstance) {
+      return new Promise((resolve, reject) => {
+        dbInstance.close((err) => {
+          if (err) {
+            console.error("Error closing database:", err);
+            reject(err);
+          } else {
+            console.log("Database connection closed.");
+            dbInstance = null;
+            resolve();
+          }
         });
-    },
-
-    async insertCourse(course) {
-        const dbConn = await getDb();
-        return new Promise((resolve, reject) => {
-            dbConn.run(
-                "INSERT OR REPLACE INTO courses (course_id, name) VALUES (?, ?)",
-                [course.id, course.name],
-                function (err) {
-                    if (err) {
-                        console.error("Error inserting course:", err);
-                        reject(err);
-                    } else {
-                        resolve(this.lastID);
-                    }
-                }
-            );
-        });
-    },
-    async deleteAllMarksOfHalfYear(SpUsername, halfYear) {
-        const dbConn = await getDb();
-        return new Promise((resolve, reject) => {
-            dbConn.run(
-                "DELETE FROM marks WHERE sp_username = ? AND half_year = ?",
-                [SpUsername, halfYear],
-                function (err) {
-                    if (err) {
-                        console.error("Error deleting existing marks:", err);
-                        reject(err);
-                    } else {
-                        console.log("Existing marks deleted successfully.");
-                        resolve(this.lastID);
-                    }
-                }
-            );
-        });
-    },
-
-    async insertMark(mark) {
-        const dbConn = await getDb();
-        return new Promise((resolve, reject) => {
-            dbConn.run(
-                "INSERT INTO marks (name, date, grade, course_id, sp_username, half_year) VALUES (?, ?, ?, ?, ?, ?)",
-                [mark.name, mark.date, mark.grade, mark.courseId, mark.SpUsername, mark.halfYear],
-                function (err) {
-                    if (err) {
-                        console.error("Error inserting mark:", err);
-                        reject(err);
-                    } else {
-                        resolve(this.lastID);
-                    }
-                }
-            );
-        });
-    },
-
-    async insertTeacher(teacher) {
-        const dbConn = await getDb();
-        return new Promise((resolve, reject) => {
-            dbConn.run(
-                "INSERT OR REPLACE INTO teachers (teacher_id, name, type, logo, abbreviation, email) VALUES (?, ?, ?, ?, ?, ?)",
-                [
-                    teacher.id,
-                    teacher.name,
-                    teacher.type,
-                    teacher.logo,
-                    teacher.abbreviation,
-                    teacher.email,
-                ],
-                function (err) {
-                    if (err) {
-                        console.error("Error inserting teacher:", err);
-                        reject(err);
-                    } else {
-                        resolve(this.lastID);
-                    }
-                }
-            );
-        });
-    },
-
-    async insertCourseTeacher(courseId, teacherId) {
-        const dbConn = await getDb();
-        return new Promise((resolve, reject) => {
-            dbConn.run(
-                "INSERT OR REPLACE INTO coursesTeachers (course_id, teacher_id) VALUES (?, ?)",
-                [courseId, teacherId],
-                (err) => {
-                    if (err) {
-                        console.error("Error inserting course-teacher relationship:", err);
-                        reject(err);
-                    } else {
-                        resolve(true);
-                    }
-                }
-            );
-        });
-    },
-
-    async insertUserCourse(SpUsername, courseId) {
-        const dbConn = await getDb();
-        return new Promise((resolve, reject) => {
-            dbConn.run(
-                "INSERT OR REPLACE INTO userCourses (sp_username, course_id) VALUES (?, ?)",
-                [SpUsername, courseId],
-                (err) => {
-                    if (err) {
-                        console.error("Error inserting user-course relationship:", err);
-                        reject(err);
-                    } else {
-                        resolve(true);
-                    }
-                }
-            );
-        });
-    },
-
-    async insertUserNotificationToken(SpUsername, token) {
-        const dbConn = await getDb();
-        return new Promise((resolve, reject) => {
-            dbConn.run(
-                "INSERT OR REPLACE INTO userNotificationTokens (sp_username, token) VALUES (?, ?)",
-                [SpUsername, token],
-                (err) => {
-                    if (err) {
-                        console.error("Error inserting user notification token:", err);
-                        reject(err);
-                    } else {
-                        resolve(true);
-                    }
-                }
-            );
-        });
-    },
-
-    async getUserNotificationToken(SpUsername) {
-        const dbConn = await getDb();
-        return new Promise((resolve, reject) => {
-            dbConn.get(
-                "SELECT token FROM userNotificationTokens WHERE sp_username = ?",
-                [SpUsername],
-                (err, row) => {
-                    if (err) {
-                        console.error("Error fetching user notification token:", err);
-                        reject(err);
-                    } else {
-                        resolve(row ? row.token : null);
-                    }
-                }
-            );
-        });
-    },
-
-    async getUserGrades(SpUsername) {
-        const dbConn = await getDb();
-        return new Promise((resolve, reject) => {
-            // First check if any records exist at all
-            dbConn.get("SELECT COUNT(*) as count FROM marks", [], (countErr, countResult) => {
-                if (countErr) {
-                    console.error("Error checking marks table:", countErr);
-                    reject(countErr);
-                    return;
-                }
-
-                console.log(`Total records in marks table: ${countResult.count}`);
-
-                // Now get the user's grades
-                dbConn.all(
-                    "SELECT * FROM marks WHERE sp_username = ?",
-                    [SpUsername],
-                    (err, rows) => {
-                        if (err) {
-                            console.error("Error fetching user grades:", err);
-                            reject(err);
-                        } else {
-                            console.log(`Found ${rows.length} grades for user ${SpUsername}`);
-                            resolve(rows);
-                        }
-                    }
-                );
-            });
-        });
-    },
-    async close() {
-        if (dbInstance) {
-            return new Promise((resolve, reject) => {
-                dbInstance.close((err) => {
-                    if (err) {
-                        console.error("Error closing database:", err);
-                        reject(err);
-                    } else {
-                        console.log("Database connection closed.");
-                        dbInstance = null;
-                        resolve();
-                    }
-                });
-            });
-        }
-    },
+      });
+    }
+  },
 };
 
 export { getDb, resetDb, db };

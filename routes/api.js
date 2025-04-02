@@ -1,8 +1,7 @@
 import express from "express";
 import {db as api} from "../db/db.js";
 import {sendNotificationToUser} from "../services/notifications.js";
-import {updateAllSpUserData} from "../index.js";
-//const cors = require("cors");
+import {updateAllSpUserData} from "../services/updateAllSpUserData.js";
 
 const router = express.Router();
 
