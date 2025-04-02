@@ -65,8 +65,8 @@ export async function getTeachers(cookies) {
 
             if (decodedId) {
                 coursesTeachers.push({
-                    courseId: parseInt(courseId),
-                    teacherId: decodedId
+                    course_id: parseInt(courseId),
+                    teacher_id: decodedId
                 });
             }
         });

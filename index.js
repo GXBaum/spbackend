@@ -26,7 +26,7 @@ export async function updateAllSpUserData(SpUsername, SpPassword, schoolId= 6078
         console.time('Script');
 
         // TODO: remove this
-        await db.insertUser(SpUsername, SpPassword);
+        await db.insertUser(SpUsername, SpPassword, 0);
 
         console.time('Login');
         const loginCookies = await getLoginCookies(SpUsername, SpPassword, schoolId);
@@ -86,7 +86,7 @@ export async function updateAllSpUserData(SpUsername, SpPassword, schoolId= 6078
          */
         for (const halfYearToProcess of [1, 2]) {
             const existingMarks = await db.getUserGrades(SpUsername);
-            const existingMarksForHalfYear = existingMarks.filter(mark => mark.halfYear === halfYearToProcess);
+            const existingMarksForHalfYear = existingMarks.filter(mark => mark.half_year === halfYearToProcess);
 
             // Store all new marks for this half year
             const newMarksForHalfYear = [];
@@ -113,7 +113,7 @@ export async function updateAllSpUserData(SpUsername, SpPassword, schoolId= 6078
                 return !existingMarksForHalfYear.some(existingMark =>
                     existingMark.name === newMark.name &&
                     existingMark.date === newMark.date &&
-                    existingMark.courseId === newMark.courseId
+                    existingMark.course_id === newMark.courseId
                 );
             });
 
@@ -129,18 +129,18 @@ export async function updateAllSpUserData(SpUsername, SpPassword, schoolId= 6078
 
             // Send notifications for new marks
             for (const courseId in newMarksByCourse) {
-                const courseName = courses.find(c => c.id.toString() === courseId.toString())?.name || "Unknown Course";
+                const courseName = courses.find(c => c.id.toString() === courseId.toString())?.name || "Unbekannter Kurs";
                 const newMarks = newMarksByCourse[courseId];
 
                 // Create detailed message about the new marks
-                let message = `You have ${newMarks.length} new ${newMarks.length === 1 ? 'mark' : 'marks'} in ${courseName}:`;
+                let message = `Du hast ${newMarks.length} neue ${newMarks.length === 1 ? 'Note' : 'Noten'} in ${courseName}:`;
                 newMarks.forEach(mark => {
                     message += `\n- ${mark.name}: ${mark.grade}`;
                 });
 
                 await sendNotificationToUser(
                     SpUsername,
-                    "Neue Noten",
+                    `Neue ${newMarks.length === 1 ? 'Note' : 'Noten'} eingetragen`,
                     message,
                     "high"
                 );

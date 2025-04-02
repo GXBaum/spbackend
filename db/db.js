@@ -43,44 +43,46 @@ async function initTables(db) {
         db.serialize(() => {
             db.run(
                 `CREATE TABLE IF NOT EXISTS users (
-          SpUsername TEXT PRIMARY KEY,
-          SpPassword TEXT
-        )`
+          sp_username TEXT PRIMARY KEY,
+          sp_password TEXT,
+          is_notifications_enabled INTEGER DEFAULT 0
+
+                 )`
             );
 
             db.run(
                 `CREATE TABLE IF NOT EXISTS courses (
-          courseId INTEGER PRIMARY KEY,
+          course_id INTEGER PRIMARY KEY,
           name TEXT
         )`
             );
 
             db.run(
                 `CREATE TABLE IF NOT EXISTS userCourses (
-                                                            SpUsername TEXT,
-                                                            courseId INTEGER,
-                                                            PRIMARY KEY(SpUsername, courseId),
-                                                            FOREIGN KEY(SpUsername) REFERENCES users(SpUsername),
-                                                            FOREIGN KEY(courseId) REFERENCES courses(courseId)
+                                                            sp_username TEXT,
+                                                            course_id INTEGER,
+                                                            PRIMARY KEY(sp_username, course_id),
+                                                            FOREIGN KEY(sp_username) REFERENCES users(sp_username),
+                                                            FOREIGN KEY(course_id) REFERENCES courses(course_id)
                  )`,
             );
 
             db.run(
                 `CREATE TABLE IF NOT EXISTS marks (
-          markId INTEGER PRIMARY KEY,
+          mark_id INTEGER PRIMARY KEY,
           name TEXT,
           date TEXT,
           grade TEXT,
-          courseId INTEGER,
-          SpUsername TEXT,
-          halfYear INTEGER,
-          FOREIGN KEY(courseId) REFERENCES courses(courseId),
-          FOREIGN KEY(SpUsername) REFERENCES users(SpUsername)
+          course_id INTEGER,
+          sp_username TEXT,
+          half_year INTEGER,
+          FOREIGN KEY(course_id) REFERENCES courses(course_id),
+          FOREIGN KEY(sp_username) REFERENCES users(sp_username)
         )`);
 
             db.run(
                 `CREATE TABLE IF NOT EXISTS teachers (
-          teacherId TEXT PRIMARY KEY,
+          teacher_id TEXT PRIMARY KEY,
           name TEXT,
           type TEXT,
           logo TEXT,
@@ -90,19 +92,19 @@ async function initTables(db) {
 
             db.run(
                 `CREATE TABLE IF NOT EXISTS coursesTeachers (
-          courseId INTEGER,
-          teacherId TEXT,
-          PRIMARY KEY(courseId, teacherId),
-          FOREIGN KEY(courseId) REFERENCES courses(courseId),
-          FOREIGN KEY(teacherId) REFERENCES teachers(teacherId)
+          course_id INTEGER,
+          teacher_id TEXT,
+          PRIMARY KEY(course_id, teacher_id),
+          FOREIGN KEY(course_id) REFERENCES courses(course_id),
+          FOREIGN KEY(teacher_id) REFERENCES teachers(teacher_id)
         )`,);
 
             db.run(
                     `CREATE TABLE IF NOT EXISTS userNotificationTokens (
-            SpUsername TEXT,
+            sp_username TEXT,
             token TEXT,
-            PRIMARY KEY(SpUsername),
-            FOREIGN KEY(SpUsername) REFERENCES users(SpUsername)
+            PRIMARY KEY(sp_username),
+            FOREIGN KEY(sp_username) REFERENCES users(sp_username)
         )`,
 
                 (err) => {
@@ -132,6 +134,8 @@ async function resetDb() {
             db.run("DROP TABLE IF EXISTS teachers");
             db.run("DROP TABLE IF EXISTS courses");
             db.run("DROP TABLE IF EXISTS users");
+            db.run("DROP TABLE IF EXISTS userNotificationTokens")
+
 
             db.run("PRAGMA foreign_keys = ON", (err) => {
                 if (err) {
@@ -151,12 +155,12 @@ async function resetDb() {
 // Database operations
 const db = {
 
-    async insertUser(spUsername, spPassword) {
+    async insertUser(spUsername, spPassword, isNotificationsEnabled = 0) {
         const dbConn = await getDb();
         return new Promise((resolve, reject) => {
             dbConn.run(
-                "INSERT OR REPLACE INTO users (SpUsername, SpPassword) VALUES (?, ?)",
-                [spUsername, spPassword],
+                "INSERT OR REPLACE INTO users (sp_username, sp_password, is_notifications_enabled) VALUES (?, ?, ?)",
+                [spUsername, spPassword, isNotificationsEnabled],
                 function (err) {
                     if (err) {
                         console.error("Error inserting user:", err);
@@ -173,7 +177,7 @@ const db = {
         const dbConn = await getDb();
         return new Promise((resolve, reject) => {
             dbConn.run(
-                "INSERT OR REPLACE INTO courses (courseId, name) VALUES (?, ?)",
+                "INSERT OR REPLACE INTO courses (course_id, name) VALUES (?, ?)",
                 [course.id, course.name],
                 function (err) {
                     if (err) {
@@ -190,7 +194,7 @@ const db = {
         const dbConn = await getDb();
         return new Promise((resolve, reject) => {
             dbConn.run(
-                "DELETE FROM marks WHERE SpUsername = ? AND halfYear = ?",
+                "DELETE FROM marks WHERE sp_username = ? AND half_year = ?",
                 [SpUsername, halfYear],
                 function (err) {
                     if (err) {
@@ -209,7 +213,7 @@ const db = {
         const dbConn = await getDb();
         return new Promise((resolve, reject) => {
             dbConn.run(
-                "INSERT INTO marks (name, date, grade, courseId, SpUsername, halfYear) VALUES (?, ?, ?, ?, ?, ?)",
+                "INSERT INTO marks (name, date, grade, course_id, sp_username, half_year) VALUES (?, ?, ?, ?, ?, ?)",
                 [mark.name, mark.date, mark.grade, mark.courseId, mark.SpUsername, mark.halfYear],
                 function (err) {
                     if (err) {
@@ -227,7 +231,7 @@ const db = {
         const dbConn = await getDb();
         return new Promise((resolve, reject) => {
             dbConn.run(
-                "INSERT OR REPLACE INTO teachers (teacherId, name, type, logo, abbreviation, email) VALUES (?, ?, ?, ?, ?, ?)",
+                "INSERT OR REPLACE INTO teachers (teacher_id, name, type, logo, abbreviation, email) VALUES (?, ?, ?, ?, ?, ?)",
                 [
                     teacher.id,
                     teacher.name,
@@ -252,7 +256,7 @@ const db = {
         const dbConn = await getDb();
         return new Promise((resolve, reject) => {
             dbConn.run(
-                "INSERT OR REPLACE INTO coursesTeachers (courseId, teacherId) VALUES (?, ?)",
+                "INSERT OR REPLACE INTO coursesTeachers (course_id, teacher_id) VALUES (?, ?)",
                 [courseId, teacherId],
                 (err) => {
                     if (err) {
@@ -270,7 +274,7 @@ const db = {
         const dbConn = await getDb();
         return new Promise((resolve, reject) => {
             dbConn.run(
-                "INSERT OR REPLACE INTO userCourses (SpUsername, courseId) VALUES (?, ?)",
+                "INSERT OR REPLACE INTO userCourses (sp_username, course_id) VALUES (?, ?)",
                 [SpUsername, courseId],
                 (err) => {
                     if (err) {
@@ -288,7 +292,7 @@ const db = {
         const dbConn = await getDb();
         return new Promise((resolve, reject) => {
             dbConn.run(
-                "INSERT OR REPLACE INTO userNotificationTokens (SpUsername, token) VALUES (?, ?)",
+                "INSERT OR REPLACE INTO userNotificationTokens (sp_username, token) VALUES (?, ?)",
                 [SpUsername, token],
                 (err) => {
                     if (err) {
@@ -306,7 +310,7 @@ const db = {
         const dbConn = await getDb();
         return new Promise((resolve, reject) => {
             dbConn.get(
-                "SELECT token FROM userNotificationTokens WHERE SpUsername = ?",
+                "SELECT token FROM userNotificationTokens WHERE sp_username = ?",
                 [SpUsername],
                 (err, row) => {
                     if (err) {
@@ -319,25 +323,7 @@ const db = {
             );
         });
     },
-/*
-    async getUserGrades(SpUsername) {
-        const dbConn = await getDb();
-        return new Promise((resolve, reject) => {
-            dbConn.all(
-                "SELECT * FROM marks WHERE SpUsername = ?",
-                [SpUsername],
-                (err, rows) => {
-                    if (err) {
-                        console.error("Error fetching user grades:", err);
-                        reject(err);
-                    } else {
-                        resolve(rows);
-                    }
-                }
-            );
-        });
-    },
-*/
+
     async getUserGrades(SpUsername) {
         const dbConn = await getDb();
         return new Promise((resolve, reject) => {
@@ -353,7 +339,7 @@ const db = {
 
                 // Now get the user's grades
                 dbConn.all(
-                    "SELECT * FROM marks WHERE SpUsername = ?",
+                    "SELECT * FROM marks WHERE sp_username = ?",
                     [SpUsername],
                     (err, rows) => {
                         if (err) {
