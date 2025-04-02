@@ -73,10 +73,10 @@ async function initTables(db) {
           grade TEXT,
           courseId INTEGER,
           SpUsername TEXT,
+          halfYear INTEGER,
           FOREIGN KEY(courseId) REFERENCES courses(courseId),
           FOREIGN KEY(SpUsername) REFERENCES users(SpUsername)
-        )`
-            );
+        )`);
 
             db.run(
                 `CREATE TABLE IF NOT EXISTS teachers (
@@ -86,8 +86,7 @@ async function initTables(db) {
           logo TEXT,
           abbreviation TEXT,
           email TEXT
-        )`
-            );
+        )`);
 
             db.run(
                 `CREATE TABLE IF NOT EXISTS coursesTeachers (
@@ -96,6 +95,14 @@ async function initTables(db) {
           PRIMARY KEY(courseId, teacherId),
           FOREIGN KEY(courseId) REFERENCES courses(courseId),
           FOREIGN KEY(teacherId) REFERENCES teachers(teacherId)
+        )`,);
+
+            db.run(
+                    `CREATE TABLE IF NOT EXISTS userNotificationTokens (
+            SpUsername TEXT,
+            token TEXT,
+            PRIMARY KEY(SpUsername),
+            FOREIGN KEY(SpUsername) REFERENCES users(SpUsername)
         )`,
 
                 (err) => {
@@ -179,12 +186,12 @@ const db = {
             );
         });
     },
-    async deleteAllMarks(SpUsername, courseId) {
+    async deleteAllMarksOfHalfYear(SpUsername, halfYear) {
         const dbConn = await getDb();
         return new Promise((resolve, reject) => {
             dbConn.run(
-                "DELETE FROM marks WHERE SpUsername = ?",
-                [SpUsername],
+                "DELETE FROM marks WHERE SpUsername = ? AND halfYear = ?",
+                [SpUsername, halfYear],
                 function (err) {
                     if (err) {
                         console.error("Error deleting existing marks:", err);
@@ -202,8 +209,8 @@ const db = {
         const dbConn = await getDb();
         return new Promise((resolve, reject) => {
             dbConn.run(
-                "INSERT INTO marks (name, date, grade, courseId, SpUsername) VALUES (?, ?, ?, ?, ?)",
-                [mark.name, mark.date, mark.grade, mark.courseId, mark.SpUsername],
+                "INSERT INTO marks (name, date, grade, courseId, SpUsername, halfYear) VALUES (?, ?, ?, ?, ?, ?)",
+                [mark.name, mark.date, mark.grade, mark.courseId, mark.SpUsername, mark.halfYear],
                 function (err) {
                     if (err) {
                         console.error("Error inserting mark:", err);
@@ -277,6 +284,90 @@ const db = {
         });
     },
 
+    async insertUserNotificationToken(SpUsername, token) {
+        const dbConn = await getDb();
+        return new Promise((resolve, reject) => {
+            dbConn.run(
+                "INSERT OR REPLACE INTO userNotificationTokens (SpUsername, token) VALUES (?, ?)",
+                [SpUsername, token],
+                (err) => {
+                    if (err) {
+                        console.error("Error inserting user notification token:", err);
+                        reject(err);
+                    } else {
+                        resolve(true);
+                    }
+                }
+            );
+        });
+    },
+
+    async getUserNotificationToken(SpUsername) {
+        const dbConn = await getDb();
+        return new Promise((resolve, reject) => {
+            dbConn.get(
+                "SELECT token FROM userNotificationTokens WHERE SpUsername = ?",
+                [SpUsername],
+                (err, row) => {
+                    if (err) {
+                        console.error("Error fetching user notification token:", err);
+                        reject(err);
+                    } else {
+                        resolve(row ? row.token : null);
+                    }
+                }
+            );
+        });
+    },
+/*
+    async getUserGrades(SpUsername) {
+        const dbConn = await getDb();
+        return new Promise((resolve, reject) => {
+            dbConn.all(
+                "SELECT * FROM marks WHERE SpUsername = ?",
+                [SpUsername],
+                (err, rows) => {
+                    if (err) {
+                        console.error("Error fetching user grades:", err);
+                        reject(err);
+                    } else {
+                        resolve(rows);
+                    }
+                }
+            );
+        });
+    },
+*/
+    async getUserGrades(SpUsername) {
+        const dbConn = await getDb();
+        return new Promise((resolve, reject) => {
+            // First check if any records exist at all
+            dbConn.get("SELECT COUNT(*) as count FROM marks", [], (countErr, countResult) => {
+                if (countErr) {
+                    console.error("Error checking marks table:", countErr);
+                    reject(countErr);
+                    return;
+                }
+
+                console.log(`Total records in marks table: ${countResult.count}`);
+
+                // Now get the user's grades
+                dbConn.all(
+                    "SELECT * FROM marks WHERE SpUsername = ?",
+                    [SpUsername],
+                    (err, rows) => {
+                        if (err) {
+                            console.error("Error fetching user grades:", err);
+                            reject(err);
+                        } else {
+                            console.log(`Found ${rows.length} grades for user ${SpUsername}`);
+                            resolve(rows);
+                        }
+                    }
+                );
+            });
+        });
+    },
     async close() {
         if (dbInstance) {
             return new Promise((resolve, reject) => {

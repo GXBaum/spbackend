@@ -27,6 +27,7 @@ function sendNotification(title, message, priority, token) {
 */
 
 import admin from "../config/firebase.js";
+import {db} from "../db/db.js";
 export function sendNotification(title, message, priority, token) {
     // Create the message payload
     const payload = {
@@ -46,23 +47,6 @@ export function sendNotification(title, message, priority, token) {
                 default_vibrate_timings: true
             }
         },
-        // Set content_available for iOS
-        apns: {
-            headers: {
-                "apns-priority": "10"
-            },
-            payload: {
-                aps: {
-                    alert: {
-                        title: title,
-                        body: message
-                    },
-                    sound: "default",
-                    badge: 1,
-                    content_available: true
-                }
-            }
-        },
         token: token
     };
 
@@ -76,4 +60,19 @@ export function sendNotification(title, message, priority, token) {
             console.error('Error sending notification:', error);
             throw error;
         });
+}
+
+
+// Helper function to send to a user by ID
+export async function sendNotificationToUser(userId, title, message, priority = "high") {
+    try {
+        const token = await db.getUserNotificationToken(userId);
+        if (!token) {
+            throw new Error(`No notification token found for user ${userId}`);
+        }
+        return await sendNotification(title, message, priority, token);
+    } catch (error) {
+        console.error(`Failed to send notification to user ${userId}:`, error);
+        throw error;
+    }
 }
