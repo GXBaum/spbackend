@@ -52,7 +52,7 @@ async function loginGetSPHSessionCookie(username, password, schoolId) {
     const updatedCookies = response.headers.get("set-cookie");
     const formattedUpdatedCookies = formatUpdatedCookies(updatedCookies, "");
 
-    console.log("Final URL:", response.url);
+    console.log("First URL:", response.url);
     console.log("Response status:", response.status, response.statusText);
     console.log("Updated cookies: ", formattedUpdatedCookies);
 

@@ -56,5 +56,17 @@ router.get('/triggerUpdate', (req, res) => {
 
 });
 
+router.get('/sendNotification' , (req, res) => {
+
+    sendNotificationToUser("Rafael.Beckmann", "test", "test", "high")
+        .then(() => {
+            res.status(200).json({ success: true, message: 'Notification sent successfully' });
+        })
+        .catch(error => {
+            console.error('Error sending notification:', error);
+            res.status(500).json({ success: false, message: 'Failed to send notification' });
+        });
+})
+
 
 export default router;
