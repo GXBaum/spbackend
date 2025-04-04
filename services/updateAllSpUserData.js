@@ -1,4 +1,3 @@
-import {db} from "../db/db.js";
 import {getLoginCookies} from "./auth.js";
 import {getCourses} from "./courses.js";
 import {getMarks} from "./marks.js";
@@ -7,13 +6,13 @@ import {getTeachers} from "./teachers.js";
 import fetch from "node-fetch";
 import {USER_AGENT} from "../config/constants.js";
 import * as cheerio from "cheerio";
+import db from "../db/db.js";
 
 export async function updateAllSpUserData(SpUsername, SpPassword, schoolId= 6078) {
     try {
         console.time('Script');
 
-        // TODO: remove this
-        //await db.insertUser(SpUsername, SpPassword, 1);
+        await db.connect();
 
         console.time('Login');
         const loginCookies = await getLoginCookies(SpUsername, SpPassword, schoolId);
@@ -38,16 +37,19 @@ export async function updateAllSpUserData(SpUsername, SpPassword, schoolId= 6078
         const html = await response.text();
         const $ = cheerio.load(html);
 
+
         const courses = getCourses2($);
+
+        console.log(courses);
         for (const course of courses) {
-            await db.insertCourse({ id: course.id, name: course.name }); // Use db.insertCourse
+            await db.addCourse(course.id, course.name)
         }
         for (const course of courses) {
-            await db.insertUserCourse(SpUsername, course.id);
+            await db.enrollUserInCourse(SpUsername, course.id);
         }
 
         for (const halfYearToProcess of [1, 2]) {
-            const existingMarks = await db.getUserGrades(SpUsername);
+            const existingMarks = await db.getUserMarks(SpUsername);
             const existingMarksForHalfYear = existingMarks.filter(mark => mark.half_year === halfYearToProcess);
 
             // Store all new marks for this half year
@@ -57,6 +59,8 @@ export async function updateAllSpUserData(SpUsername, SpPassword, schoolId= 6078
             console.log(`Processing half year ${halfYearToProcess}`);
             for (const course of courses) {
                 const marks = await getMarks(loginCookies, course.id, halfYearToProcess);
+
+                console.log(marks);
 
                 marks.forEach(mark => {
                     newMarksForHalfYear.push({
@@ -109,11 +113,11 @@ export async function updateAllSpUserData(SpUsername, SpPassword, schoolId= 6078
             }
 
             // Now delete and insert all marks
-            await db.deleteAllMarksOfHalfYear(SpUsername, halfYearToProcess);
+            await db.deleteMarksOfHalfYear(SpUsername, halfYearToProcess);
 
             // Insert all new marks
             for (const mark of newMarksForHalfYear) {
-                await db.insertMark(mark);
+                await db.addMark(mark)
             }
         }
 
@@ -126,17 +130,10 @@ export async function updateAllSpUserData(SpUsername, SpPassword, schoolId= 6078
         console.log("Course-Teacher relationships found:", coursesTeachers.length);
 
         for (const teacher of teachers) {
-            await db.insertTeacher({
-                id: teacher.id,
-                name: teacher.text,
-                type: teacher.type,
-                logo: teacher.logo,
-                abbreviation: teacher.abbreviation,
-                email: teacher.email
-            });
+            await db.addTeacher(teacher);
         }
         for (const relation of coursesTeachers) {
-            await db.insertCourseTeacher(relation.courseId, relation.teacherId);
+            await db.assignTeacherToCourse(relation.courseId, relation.teacherId);
         }
         console.timeEnd("getTeachers");
 

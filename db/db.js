@@ -19,7 +19,7 @@ const TABLE_NAMES = {
 
 // Singleton database class
 class Database {
-  #instance = null;
+  static #instance = null;
 
   constructor() {
     if (Database.#instance) {
@@ -159,10 +159,10 @@ class Database {
     return this.#all(`SELECT * FROM ${TABLE_NAMES.USER}`);
   }
 
-  async addCourse(name) {
+  async addCourse(courseId, name) {
     return this.#run(
-      `INSERT INTO ${TABLE_NAMES.COURSE} (name) VALUES (?)`,
-      [name]
+      `INSERT OR REPLACE INTO ${TABLE_NAMES.COURSE} (course_id, name) VALUES (?, ?)`,
+      [courseId, name]
     );
   }
 
@@ -202,14 +202,6 @@ class Database {
       `INSERT OR REPLACE INTO ${TABLE_NAMES.USER_COURSE} (sp_username, course_id) 
        VALUES (?, ?)`,
       [spUsername, courseId]
-    );
-  }
-
-  async setNotificationToken(spUsername, token) {
-    return this.#run(
-      `INSERT OR REPLACE INTO ${TABLE_NAMES.USER_NOTIFICATION_TOKEN} (sp_username, token) 
-       VALUES (?, ?)`,
-      [spUsername, token]
     );
   }
 

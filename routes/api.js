@@ -1,59 +1,53 @@
 import express from "express";
-import {db as api} from "../db/db.js";
 import {sendNotificationToUser} from "../services/notifications.js";
 import {updateAllSpUserData} from "../services/updateAllSpUserData.js";
+import db from "../db/db.js";
 
 const router = express.Router();
 
-router.post('/updateToken', (req, res) => {
-    const { token, spUsername } = req.body;
+router.post('/updateToken', async (req, res) => {
+    const {token, spUsername} = req.body;
 
     console.log(req.body);
     console.log('Received token:', token);
     console.log('For user:', spUsername);
 
-    api.insertUserNotificationToken(spUsername, token)
-        .then(() => {
-            res.status(200).json({ success: true, message: 'Token updated successfully' });
-        })
-        .catch(error => {
-            console.error('Error updating token:', error);
-            res.status(500).json({ success: false, message: 'Failed to update token' });
-        });
+    await db.connect();
+    db.setNotificationToken(spUsername, token).then(
+        () => {
+            console.log('Token updated successfully');
+            res.status(200).json({success: true, message: 'Token updated successfully'});
+        }
+    )
+    await db.close()
 });
 
-router.post('/userGrades', (req, res) => {
-    const { spUsername } = req.body;
+router.post('/userMarks', async (req, res) => {
+    const {spUsername} = req.body;
 
     try {
-        sendNotificationToUser("Rafael.Beckmann", "user Noten angefragt", spUsername, "high")
+        await sendNotificationToUser("Rafael.Beckmann", "user Noten angefragt", spUsername, "high")
     } catch (error) {
         console.error('Error sending notification:', error);
     }
 
-    api.getUserGrades(spUsername)
-        .then((grades) => {
-            console.log('Fetched grades:', grades);
-            res.status(200).json({ success: true, grades });
-        })
-        .catch(error => {
-            console.error('Error fetching grades:', error);
-            res.status(500).json({ success: false, message: 'Failed to fetch grades' });
-        });
+    await db.connect();
+    db.getUserMarks().then((marks) => {
+        res.status(200).json({success: true, marks});
+    })
+    await db.close();
 });
 
-router.get('/triggerUpdate', (req, res) => {
+router.get('/triggerUpdate', async (req, res) => {
 
     console.log('Received trigger update for user:');
-
     try {
-        updateAllSpUserData("Rafael.Beckmann", "RafaelBigFail5-", 6078)
-        res.status(200).json({ success: true, message: 'Update triggered successfully' });
+        await updateAllSpUserData("Rafael.Beckmann", "RafaelBigFail5-", 6078)
+        res.status(200).json({success: true, message: 'Update triggered successfully'});
     } catch (error) {
         console.error('Error sending notification:', error);
-        res.status(500).json({ success: false, message: 'Failed to trigger update' });
+        res.status(500).json({success: false, message: 'Failed to trigger update'});
     }
-
 });
 
 router.get('/sendNotification' , (req, res) => {
@@ -66,7 +60,11 @@ router.get('/sendNotification' , (req, res) => {
             console.error('Error sending notification:', error);
             res.status(500).json({ success: false, message: 'Failed to send notification' });
         });
-})
+});
+
+
+
+
 
 
 export default router;

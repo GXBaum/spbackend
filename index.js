@@ -1,9 +1,9 @@
-import { getDb, resetDb, db } from './db/db.js';
 import { sendNotificationToUser } from './services/notifications.js';
 import express from 'express';
 import apiRoutes from './routes/api.js';
 import { EXPRESS_PORT } from './config/constants.js';
 import { scheduleUpdates } from './services/scheduleUpdates.js';
+import db from "./db/db.js";
 
 
 const app = express();
@@ -18,7 +18,7 @@ async function startServer() {
 
   try {
     // Initialize the database
-    await getDb();
+    await db.connect();
 
     // Start the Express server
     server = app.listen(EXPRESS_PORT, () => {
