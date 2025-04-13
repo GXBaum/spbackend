@@ -1,6 +1,6 @@
 import schedule from "node-schedule";
 import {updateAllSpUserData} from "./updateAllSpUserData.js";
-import db from "../db/db.js";
+import db from "../db/insert.js";
 
 export function scheduleUpdates() {
     // Configuration variables (could be moved to environment variables)
@@ -14,9 +14,7 @@ export function scheduleUpdates() {
 
         try {
             // Get all users with notifications enabled in one db call
-            await db.connect();
             const users = await db.getUsers();
-            await db.close();
             const enabledUsers = users.filter(user => user.notifications_enabled === 1);
 
             console.log(`Users ${enabledUsers.length}; ${JSON.stringify(enabledUsers)}`);

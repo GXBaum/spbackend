@@ -25,9 +25,9 @@ function sendNotification(title, message, priority, token) {
 
 }
 */
+import db from "../db/insert.js";
 
 import admin from "../config/firebase.js";
-import db from "../db/db.js";
 export function sendNotification(title, message, priority, token) {
     // Create the message payload
     const payload = {
@@ -66,14 +66,12 @@ export function sendNotification(title, message, priority, token) {
 // Helper function to send to a user by ID
 export async function sendNotificationToUser(userId, title, message, priority = "high") {
     try {
-        await db.connect();
-        const token = await db.getNotificationToken(userId);
+        const token = await db.getUserNotificationToken(userId);
         console.log(`Token for user ${userId}:`, token);
-        await db.close();
         if (!token) {
             throw new Error(`No notification token found for user ${userId}`);
         }
-        return await sendNotification(title, message, priority, token);
+        return await sendNotification(title, message, priority, token.token);
     } catch (error) {
         console.error(`Failed to send notification to user ${userId}:`, error);
         throw error;

@@ -3,7 +3,6 @@ import express from 'express';
 import apiRoutes from './routes/api.js';
 import { EXPRESS_PORT } from './config/constants.js';
 import { scheduleUpdates } from './services/scheduleUpdates.js';
-import db from "./db/db.js";
 
 
 const app = express();
@@ -18,7 +17,6 @@ async function startServer() {
 
   try {
     // Initialize the database
-    await db.connect();
 
     // Start the Express server
     server = app.listen(EXPRESS_PORT, () => {
@@ -65,7 +63,6 @@ async function startServer() {
       });
     }
     try {
-      await db.close();
       console.log('Database connection closed');
     } catch (closeError) {
       console.error('Error closing database:', closeError);

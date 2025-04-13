@@ -1,7 +1,7 @@
 import express from "express";
 import {sendNotificationToUser} from "../services/notifications.js";
 import {updateAllSpUserData} from "../services/updateAllSpUserData.js";
-import db from "../db/db.js";
+import db from "../db/insert.js"
 
 const router = express.Router();
 
@@ -12,8 +12,7 @@ router.post('/updateToken', async (req, res) => {
     console.log('Received token:', token);
     console.log('For user:', spUsername);
 
-    await db.connect();
-    db.setNotificationToken(spUsername, token).then(
+    db.insertUserNotificationToken(spUsername, token).then(
         () => {
             console.log('Token updated successfully');
             res.status(200).json({success: true, message: 'Token updated successfully'});
@@ -31,7 +30,6 @@ router.post('/userMarks', async (req, res) => {
         console.error('Error sending notification:', error);
     }
 
-    await db.connect();
     db.getUserMarks().then((marks) => {
         res.status(200).json({success: true, marks});
     })

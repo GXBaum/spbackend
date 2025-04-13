@@ -6,13 +6,12 @@ import {getTeachers} from "./teachers.js";
 import fetch from "node-fetch";
 import {USER_AGENT} from "../config/constants.js";
 import * as cheerio from "cheerio";
-import db from "../db/db.js";
-
+//import db from "../db/db.js";
+import db from "../db/insert.js";
 export async function updateAllSpUserData(SpUsername, SpPassword, schoolId= 6078) {
     try {
         console.time('Script');
 
-        await db.connect();
 
         console.time('Login');
         const loginCookies = await getLoginCookies(SpUsername, SpPassword, schoolId);
@@ -40,17 +39,25 @@ export async function updateAllSpUserData(SpUsername, SpPassword, schoolId= 6078
 
         const courses = getCourses2($);
 
-        console.log(courses);
+        //console.log(courses);
         for (const course of courses) {
-            await db.addCourse(course.id, course.name)
+            await db.insertCourse(course.id, course.name)
         }
         for (const course of courses) {
-            await db.enrollUserInCourse(SpUsername, course.id);
+            await db.insertUserCourse(SpUsername, course.id);
         }
 
         for (const halfYearToProcess of [1, 2]) {
+            //await db.connect();
+            console.log("user:", SpUsername);
             const existingMarks = await db.getUserMarks(SpUsername);
+            console.log("Existing marks:", existingMarks.length);
+            console.log(existingMarks);
             const existingMarksForHalfYear = existingMarks.filter(mark => mark.half_year === halfYearToProcess);
+
+            console.log("Existing marks for half year:", halfYearToProcess);
+            console.log(existingMarksForHalfYear);
+
 
             // Store all new marks for this half year
             const newMarksForHalfYear = [];
@@ -60,7 +67,7 @@ export async function updateAllSpUserData(SpUsername, SpPassword, schoolId= 6078
             for (const course of courses) {
                 const marks = await getMarks(loginCookies, course.id, halfYearToProcess);
 
-                console.log(marks);
+                //console.log(marks);
 
                 marks.forEach(mark => {
                     newMarksForHalfYear.push({
@@ -112,12 +119,18 @@ export async function updateAllSpUserData(SpUsername, SpPassword, schoolId= 6078
                 );
             }
 
+
+            //await db.connect();
             // Now delete and insert all marks
             await db.deleteMarksOfHalfYear(SpUsername, halfYearToProcess);
 
             // Insert all new marks
             for (const mark of newMarksForHalfYear) {
-                await db.addMark(mark)
+                console.log("Inserting mark:", JSON.stringify(mark));
+                console.log("mark:" + mark);
+                const res = await db.insertMark(mark)
+                console.log("Inserted mark:", res);
+
             }
         }
 
@@ -130,10 +143,11 @@ export async function updateAllSpUserData(SpUsername, SpPassword, schoolId= 6078
         console.log("Course-Teacher relationships found:", coursesTeachers.length);
 
         for (const teacher of teachers) {
-            await db.addTeacher(teacher);
+            await db.insertTeacher(teacher);
         }
         for (const relation of coursesTeachers) {
-            await db.assignTeacherToCourse(relation.courseId, relation.teacherId);
+            console.log(relation);
+            await db.insertCourseTeacher(relation.courseId, relation.teacherId);
         }
         console.timeEnd("getTeachers");
 
@@ -285,7 +299,6 @@ export async function updateAllSpUserData(SpUsername, SpPassword, schoolId= 6078
         console.error("Error:", error);
         console.timeEnd('Script'); // Ensure it still ends even on error
     } finally {
-        await db.close(); // Close the database connection when done
     }
 }
 
@@ -350,9 +363,9 @@ async function getTeachers2($) {
             if (decodedId && !teachers.some(t => t.id === decodedId)) {
                 const teacher = {
                     type: "lul",
-                    id: decodedId,
+                    teacherId: decodedId,
                     logo: "fa fa-user",
-                    text: name,
+                    name: name,
                     abbreviation: abbreviation,
                     email: email
                 };
@@ -361,8 +374,8 @@ async function getTeachers2($) {
 
             if (decodedId) {
                 coursesTeachers.push({
-                    course_id: parseInt(courseId),
-                    teacher_id: decodedId
+                    courseId: parseInt(courseId),
+                    teacherId: decodedId
                 });
             }
         });
