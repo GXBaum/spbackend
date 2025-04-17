@@ -117,7 +117,8 @@ export async function updateAllSpUserData(SpUsername, SpPassword, schoolId= 6078
                     SpUsername,
                     `Neue ${newMarks.length === 1 ? 'Note' : 'Noten'} eingetragen`,
                     message,
-                    "high"
+                    "high",
+                    newMarks[0].grade
                 );
             }
 
