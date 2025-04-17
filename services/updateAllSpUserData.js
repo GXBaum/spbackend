@@ -100,6 +100,8 @@ export async function updateAllSpUserData(SpUsername, SpPassword, schoolId= 6078
             }
 
 
+            //TODO: hat 2 einmal wieder falsch benachrichtigt
+                
             // Send notifications for new marks
             for (const courseId in newMarksByCourse) {
                 const courseName = courses.find(c => c.id.toString() === courseId.toString())?.name || "Unbekannter Kurs";
@@ -129,7 +131,7 @@ export async function updateAllSpUserData(SpUsername, SpPassword, schoolId= 6078
                 console.log("Inserting mark:", JSON.stringify(mark));
                 console.log("mark:" + mark);
                 const res = await db.insertMark(mark)
-                console.log("Inserted mark:", res);
+                //console.log("Inserted mark:", res);
 
             }
         }

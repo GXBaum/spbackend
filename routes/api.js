@@ -18,11 +18,10 @@ router.post('/updateToken', async (req, res) => {
             res.status(200).json({success: true, message: 'Token updated successfully'});
         }
     )
-    await db.close()
 });
 
-router.post('/userMarks', async (req, res) => {
-    const {spUsername} = req.body;
+router.get('/getUserMarks', async (req, res) => {
+    const spUsername = req.query.spUsername;
 
     try {
         await sendNotificationToUser("Rafael.Beckmann", "user Noten angefragt", spUsername, "high")
@@ -30,11 +29,28 @@ router.post('/userMarks', async (req, res) => {
         console.error('Error sending notification:', error);
     }
 
-    db.getUserMarks().then((marks) => {
+    db.getUserMarks(spUsername).then((marks) => {
         res.status(200).json({success: true, marks});
     })
-    await db.close();
 });
+
+
+router.get('/getUserMarksForCourse', async (req, res) => {
+    //const spUsername = req.query.spUsername;
+    const spUsername = "Rafael.Beckmann";
+    const courseId = req.query.courseId;
+
+    console.log('Received :', spUsername);
+    console.log('Course ID:', courseId);
+
+    db.getUserMarksForCourse(spUsername, courseId).then((marks) => {
+        console.log('Marks:', marks);
+        res.status(200).json({success: true, marks});
+    }).catch((error) => {
+        console.error('Error getting marks:', error);
+        res.status(500).json({success: false, message: 'Failed to get marks'});
+    });
+})
 
 router.get('/triggerUpdate', async (req, res) => {
 
@@ -59,6 +75,25 @@ router.get('/sendNotification' , (req, res) => {
             res.status(500).json({ success: false, message: 'Failed to send notification' });
         });
 });
+
+router.get('/getUserCourses', async (req, res) => {
+    const spUsername = req.query.spUsername;
+
+    console.log('Received :', spUsername);
+
+    db.getUserCourseNames(spUsername).then((courses) => {
+        // Rename course_id to courseId in each course object
+        const formattedCourses = courses.map(course => ({
+            courseId: course.course_id,
+            name: course.name
+        }));
+        console.log('Courses:', formattedCourses);
+        res.status(200).json({success: true, courses: formattedCourses});
+    }).catch((error) => {
+        console.error('Error getting courses:', error);
+        res.status(500).json({success: false, message: 'Failed to get courses'});
+    });
+})
 
 
 

@@ -114,6 +114,29 @@ const getUserMarks = async (spUsername) => {
     }
 }
 
+// Get marks for a specific course
+const getUserMarksForCourse = async (spUsername, courseId) => {
+    const db = getDb();
+    try {
+        return new Promise((resolve, reject) => {
+            db.all(
+                `SELECT * FROM ${TABLE_NAMES.MARK} WHERE sp_username = ? AND course_id = ?`,
+                [spUsername, courseId],
+                (err, rows) => {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        resolve(rows);
+                    }
+                }
+            );
+        });
+    } finally {
+        db.close();
+    }
+};
+
+
 // Insert teacher
 const insertTeacher = async ({teacherId, name, type = null, logo = null, abbreviation = null, email = null}) => {
     const db = getDb();
@@ -135,7 +158,7 @@ const insertCourseTeacher = async (courseId, teacherId) => {
     try {
         await execute(
             db,
-            `INSERT INTO ${TABLE_NAMES.COURSE_TEACHER} (course_id, teacher_id)
+            `INSERT OR REPLACE INTO ${TABLE_NAMES.COURSE_TEACHER} (course_id, teacher_id)
              VALUES (?, ?)`,
             [courseId, teacherId]
         );
@@ -150,7 +173,7 @@ const insertUserNotificationToken = async (spUsername, token) => {
     try {
         await execute(
             db,
-            `INSERT INTO ${TABLE_NAMES.USER_NOTIFICATION_TOKEN} (sp_username, token)
+            `INSERT OR REPLACE INTO ${TABLE_NAMES.USER_NOTIFICATION_TOKEN} (sp_username, token)
              VALUES (?, ?)`,
             [spUsername, token]
         );
@@ -176,6 +199,47 @@ const getUserNotificationToken = async (spUsername) => {
     }
 }
 
+const getUserCourses = async (spUsername) => {
+    const db = getDb();
+    try {
+        return new Promise((resolve, reject) => {
+            db.all(`SELECT * FROM ${TABLE_NAMES.USER_COURSE} WHERE sp_username = ?`, [spUsername], (err, rows) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(rows);
+                }
+            });
+        });
+    } finally {
+        db.close();
+    }
+}
+
+const getUserCourseNames = async (spUsername) => {
+    const db = getDb();
+    try {
+        return new Promise((resolve, reject) => {
+            db.all(
+                `SELECT c.course_id, c.name
+                 FROM ${TABLE_NAMES.USER_COURSE} uc
+                          JOIN ${TABLE_NAMES.COURSE} c ON uc.course_id = c.course_id
+                 WHERE uc.sp_username = ?`,
+                [spUsername],
+                (err, rows) => {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        resolve(rows);
+                    }
+                }
+            );
+        });
+    } finally {
+        db.close();
+    }
+};
+
 // Export all functions as a single object
 export default {
     insertUser,
@@ -187,6 +251,10 @@ export default {
     insertUserNotificationToken,
     getUserNotificationToken,
     getUserMarks,
+    getUserMarksForCourse,
     deleteMarksOfHalfYear,
-    getUsers
+    getUsers,
+    getUserCourses,
+    getUserCourseNames,
+
 };
