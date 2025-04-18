@@ -25,18 +25,6 @@ router.put('/users/:username/notification-token', async (req, res) => {
     }
 });
 
-
-router.get('/vp', async (req, res) => {
-    try {
-        const data = await scrapeVpData("https://www.kleist-schule.de/vertretungsplan/schueler/aktuelle%20plaene/1/vp.html");
-        res.status(200).json({ success: true, data });
-    } catch (error) {
-        console.error('Error scraping VP data:', error);
-        res.status(500).json({ success: false, message: 'Failed to fetch VP data' });
-    }
-});
-
-
 router.get('/users/:username/marks', async (req, res) => {
     const { username } = req.params;
 
@@ -45,7 +33,7 @@ router.get('/users/:username/marks', async (req, res) => {
     db.getUserMarks(username).then((marks) => {
         console.log('Marks:', marks);
         res.status(200).json({success: true, marks});
-        sendNotificationToUser("Rafael.Beckmann", "user Noten angefragt", spUsername, "high")
+        sendNotificationToUser("Rafael.Beckmann", "user Noten angefragt", username, "high")
     }).catch((error) => {
         console.error('Error getting marks:', error);
         res.status(500).json({success: false, message: 'Failed to get marks'});
@@ -67,37 +55,12 @@ router.get('/users/:username/:courseId/marks', async (req, res) => {
     });
 })
 
+router.get('/users/:username/courses', async (req, res) => {
+    const { username } = req.params;
 
-router.get('/triggerUpdate', async (req, res) => {
+    console.log('Received courses fetch request:', username);
 
-    console.log('Received trigger update for user:');
-    try {
-        await updateAllSpUserData("Rafael.Beckmann", "RafaelBigFail5-", 6078)
-        res.status(200).json({success: true, message: 'Update triggered successfully'});
-    } catch (error) {
-        console.error('Error sending notification:', error);
-        res.status(500).json({success: false, message: 'Failed to trigger update'});
-    }
-});
-
-router.get('/sendNotification' , (req, res) => {
-
-    sendNotificationToUser("Rafael.Beckmann", "test", "test", "high", "1")
-        .then(() => {
-            res.status(200).json({ success: true, message: 'Notification sent successfully' });
-        })
-        .catch(error => {
-            console.error('Error sending notification:', error);
-            res.status(500).json({ success: false, message: 'Failed to send notification' });
-        });
-});
-
-router.get('/getUserCourses', async (req, res) => {
-    const spUsername = req.query.spUsername;
-
-    console.log('Received :', spUsername);
-
-    db.getUserCourseNames(spUsername).then((courses) => {
+    db.getUserCourseNames(username).then((courses) => {
         // Rename course_id to courseId in each course object
         const formattedCourses = courses.map(course => ({
             courseId: course.course_id,
@@ -112,7 +75,45 @@ router.get('/getUserCourses', async (req, res) => {
 })
 
 
-router.get("rick", (req, res) => {
+router.get('/vp', async (req, res) => {
+    try {
+        const data = await scrapeVpData("https://www.kleist-schule.de/vertretungsplan/schueler/aktuelle%20plaene/1/vp.html");
+        res.status(200).json({ success: true, data });
+    } catch (error) {
+        console.error('Error scraping VP data:', error);
+        res.status(500).json({ success: false, message: 'Failed to fetch VP data' });
+    }
+});
+
+
+// dev
+router.get('/triggerUpdate', async (req, res) => {
+
+    console.log('Received trigger update for user:');
+    try {
+        await updateAllSpUserData("Rafael.Beckmann", "RafaelBigFail5-", 6078)
+        res.status(200).json({success: true, message: 'Update triggered successfully'});
+    } catch (error) {
+        console.error('Error sending notification:', error);
+        res.status(500).json({success: false, message: 'Failed to trigger update'});
+    }
+});
+
+// dev
+router.get('/sendNotification' , (req, res) => {
+
+    sendNotificationToUser("Rafael.Beckmann", "test", "test", "high", "1")
+        .then(() => {
+            res.status(200).json({ success: true, message: 'Notification sent successfully' });
+        })
+        .catch(error => {
+            console.error('Error sending notification:', error);
+            res.status(500).json({ success: false, message: 'Failed to send notification' });
+        });
+});
+
+
+router.get("/rick", (req, res) => {
     res.redirect("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
 });
 
