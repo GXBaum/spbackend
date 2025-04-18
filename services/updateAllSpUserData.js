@@ -6,7 +6,6 @@ import {getTeachers} from "./teachers.js";
 import fetch from "node-fetch";
 import {USER_AGENT} from "../config/constants.js";
 import * as cheerio from "cheerio";
-//import db from "../db/db.js";
 import db from "../db/insert.js";
 export async function updateAllSpUserData(SpUsername, SpPassword, schoolId= 6078) {
     try {

@@ -2,10 +2,11 @@ import express from "express";
 import {sendNotificationToUser} from "../services/notifications.js";
 import {updateAllSpUserData} from "../services/updateAllSpUserData.js";
 import db from "../db/insert.js"
+import {scrapeVpData} from "../services/scrapeVp.js";
 
 const router = express.Router();
 
-// User resources
+// TODO: Add authentication middleware, and check if user exists
 router.put('/users/:username/notification-token', async (req, res) => {
     const { username } = req.params;
     const { token } = req.body;
@@ -24,30 +25,40 @@ router.put('/users/:username/notification-token', async (req, res) => {
     }
 });
 
-router.get('/getUserMarks', async (req, res) => {
-    const spUsername = req.query.spUsername;
 
+router.get('/vp', async (req, res) => {
     try {
-        await sendNotificationToUser("Rafael.Beckmann", "user Noten angefragt", spUsername, "high")
+        const data = await scrapeVpData("https://www.kleist-schule.de/vertretungsplan/schueler/aktuelle%20plaene/1/vp.html");
+        res.status(200).json({ success: true, data });
     } catch (error) {
-        console.error('Error sending notification:', error);
+        console.error('Error scraping VP data:', error);
+        res.status(500).json({ success: false, message: 'Failed to fetch VP data' });
     }
-
-    db.getUserMarks(spUsername).then((marks) => {
-        res.status(200).json({success: true, marks});
-    })
 });
 
 
-router.get('/getUserMarksForCourse', async (req, res) => {
-    //const spUsername = req.query.spUsername;
-    const spUsername = "Rafael.Beckmann";
-    const courseId = req.query.courseId;
+router.get('/users/:username/marks', async (req, res) => {
+    const { username } = req.params;
 
-    console.log('Received :', spUsername);
+    console.log('Received :', username);
+
+    db.getUserMarks(username).then((marks) => {
+        console.log('Marks:', marks);
+        res.status(200).json({success: true, marks});
+        sendNotificationToUser("Rafael.Beckmann", "user Noten angefragt", spUsername, "high")
+    }).catch((error) => {
+        console.error('Error getting marks:', error);
+        res.status(500).json({success: false, message: 'Failed to get marks'});
+    });
+})
+
+router.get('/users/:username/:courseId/marks', async (req, res) => {
+    const { username, courseId } = req.params;
+
+    console.log('Received :', username);
     console.log('Course ID:', courseId);
 
-    db.getUserMarksForCourse(spUsername, courseId).then((marks) => {
+    db.getUserMarksForCourse(username, courseId).then((marks) => {
         console.log('Marks:', marks);
         res.status(200).json({success: true, marks});
     }).catch((error) => {
@@ -55,6 +66,7 @@ router.get('/getUserMarksForCourse', async (req, res) => {
         res.status(500).json({success: false, message: 'Failed to get marks'});
     });
 })
+
 
 router.get('/triggerUpdate', async (req, res) => {
 
