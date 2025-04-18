@@ -5,19 +5,23 @@ import db from "../db/insert.js"
 
 const router = express.Router();
 
-router.post('/updateToken', async (req, res) => {
-    const {token, spUsername} = req.body;
+// User resources
+router.put('/users/:username/notification-token', async (req, res) => {
+    const { username } = req.params;
+    const { token } = req.body;
 
     console.log(req.body);
     console.log('Received token:', token);
-    console.log('For user:', spUsername);
+    console.log('For user:', username);
 
-    db.insertUserNotificationToken(spUsername, token).then(
-        () => {
-            console.log('Token updated successfully');
-            res.status(200).json({success: true, message: 'Token updated successfully'});
-        }
-    )
+    try {
+        await db.insertUserNotificationToken(username, token);
+        console.log('Token updated successfully');
+        res.status(200).json({ success: true });
+    } catch (error) {
+        console.error('Error updating token:', error);
+        res.status(500).json({ success: false, message: 'Failed to update token' });
+    }
 });
 
 router.get('/getUserMarks', async (req, res) => {
@@ -66,7 +70,7 @@ router.get('/triggerUpdate', async (req, res) => {
 
 router.get('/sendNotification' , (req, res) => {
 
-    sendNotificationToUser("Rafael.Beckmann", "test", "test", "high")
+    sendNotificationToUser("Rafael.Beckmann", "test", "test", "high", "1")
         .then(() => {
             res.status(200).json({ success: true, message: 'Notification sent successfully' });
         })
@@ -96,7 +100,9 @@ router.get('/getUserCourses', async (req, res) => {
 })
 
 
-
+router.get("rick", (req, res) => {
+    res.redirect("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
+});
 
 
 
