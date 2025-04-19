@@ -1,13 +1,14 @@
 import { sendNotificationToUser } from './services/notifications.js';
 import express from 'express';
-import apiRoutes from './routes/api.js';
 import { EXPRESS_PORT } from './config/constants.js';
 import { scheduleUpdates } from './services/scheduleUpdates.js';
 
+import apiDevRoutes from './routes/api.dev.js';
+import {createTables} from "./db/createTables.js";
 
 const app = express();
 app.use(express.json());
-app.use('/api', apiRoutes);
+app.use('/api/dev', apiDevRoutes);
 
 /**
  * Starts the Express server with database initialization and scheduled tasks.
@@ -17,6 +18,8 @@ async function startServer() {
 
   try {
     // Initialize the database
+    await createTables();
+
 
     // Start the Express server
     server = app.listen(EXPRESS_PORT, () => {

@@ -240,6 +240,37 @@ const getUserCourseNames = async (spUsername) => {
     }
 };
 
+const insertUserVpSelectedCourses = async (spUsername, courseName) => {
+    const db = getDb();
+    try {
+        await execute(
+            db,
+            `INSERT OR REPLACE INTO ${TABLE_NAMES.USER_VP_SELECTED_COURSES} (sp_username, course_name)
+             VALUES (?, ?)`,
+            [spUsername, courseName]
+        );
+    } finally {
+        db.close();
+    }
+};
+
+const getUserVpSelectedCourses = async (spUsername) => {
+    const db = getDb();
+    try {
+        return new Promise((resolve, reject) => {
+            db.all(`SELECT * FROM ${TABLE_NAMES.USER_VP_SELECTED_COURSES} WHERE sp_username = ?`, [spUsername], (err, rows) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(rows);
+                }
+            });
+        });
+    } finally {
+        db.close();
+    }
+}
+
 // Export all functions as a single object
 export default {
     insertUser,
@@ -256,5 +287,6 @@ export default {
     getUsers,
     getUserCourses,
     getUserCourseNames,
-
+    insertUserVpSelectedCourses,
+    getUserVpSelectedCourses
 };

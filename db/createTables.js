@@ -1,9 +1,9 @@
 import {DB_PATH, TABLE_NAMES} from "../config/constants.js";
-import {execute} from "./db.js";
+import {execute} from "./sql.js";
 import sqlite from "sqlite3";
 
 
-const main = async () => {
+export const createTables = async () => {
     const db = new sqlite.Database(DB_PATH);
 
     try {
@@ -96,6 +96,29 @@ const main = async () => {
              )`
         );
 
+        // Create user_vp_selected_courses table
+        await execute(
+            db,
+            `CREATE TABLE IF NOT EXISTS ${TABLE_NAMES.USER_VP_SELECTED_COURSES}
+             (
+                 sp_username TEXT NOT NULL,
+                 course_name TEXT NOT NULL,
+                 PRIMARY KEY (sp_username),
+                 FOREIGN KEY (sp_username) REFERENCES ${TABLE_NAMES.USER}(sp_username) ON DELETE CASCADE
+             )`
+        );
+
+        await execute(
+            db,
+            `CREATE TABLE IF NOT EXISTS ${TABLE_NAMES.VP_TEST}
+             (
+                 entry_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                 courseName TEXT NOT NULL,
+                 data TEXT NOT NULL
+             
+             )`
+        );
+
     } catch (error) {
         console.log(error);
     } finally {
@@ -103,4 +126,4 @@ const main = async () => {
     }
 };
 
-main();
+//await createTables();

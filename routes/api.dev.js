@@ -85,6 +85,36 @@ router.get('/vp', async (req, res) => {
     }
 });
 
+router.get('/users/:username/vpSelectedCourses', async (req, res) => {
+    const { username } = req.params;
+
+    console.log('Received courses fetch request:', username);
+
+    db.getUserVpSelectedCourses(username).then((courses) => {
+        // Extract the single course name string instead of mapping to array of objects
+        const courseName = courses.length > 0 ? courses[0].course_name : null;
+        console.log('Course:', courseName);
+        res.status(200).json({success: true, courseName});
+    }).catch((error) => {
+        console.error('Error getting courses:', error);
+        res.status(500).json({success: false, message: 'Failed to get courses'});
+    });
+})
+
+router.post('/users/:username/vpSelectedCourses', async (req, res) => {
+    const { username } = req.params;
+    const { courseName } = req.body;
+
+    console.log('Received course selection:', username, courseName);
+
+    try {
+        await db.insertUserVpSelectedCourses(username, courseName);
+        res.status(200).json({ success: true });
+    } catch (error) {
+        console.error('Error inserting course:', error);
+        res.status(500).json({ success: false, message: 'Failed to insert course' });
+    }
+});
 
 // dev
 router.get('/triggerUpdate', async (req, res) => {
@@ -111,6 +141,8 @@ router.get('/sendNotification' , (req, res) => {
             res.status(500).json({ success: false, message: 'Failed to send notification' });
         });
 });
+
+
 
 
 router.get("/rick", (req, res) => {

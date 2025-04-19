@@ -11,4 +11,6 @@ export const TABLE_NAMES = {
     COURSE_TEACHER: "course_teacher",
     USER_NOTIFICATION_TOKEN: "user_notification_token",
     //USER_NOTIFICATION_PREFS: "user_notification_prefs"
+    USER_VP_SELECTED_COURSES: "user_vp_selected_courses",
+    VP_TEST: "vp_test"
 };

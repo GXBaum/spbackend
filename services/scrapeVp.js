@@ -3,13 +3,10 @@ import * as cheerio from "cheerio";
 
 
 export async function scrapeVpData(url) {
-    const currentDate = new Date().toLocaleDateString("de-DE", { timeZone: "Europe/Berlin" }).replace(/\./g, "-");
-    const currentTime = new Date().toLocaleString("de-DE", { timeZone: "Europe/Berlin" }).slice(10, 19);
-
-
+    const timestamp = new Date().toISOString(); // ISO 8601 format: YYYY-MM-DDTHH:mm:ss.sssZ
 
     try {
-        const { data } = await axios.get(url);
+        const {data} = await axios.get(url);
         const formattedData = data.replace(/>\s*</g, ">\n<");
         const $ = cheerio.load(formattedData);
 
@@ -18,7 +15,7 @@ export async function scrapeVpData(url) {
             let tableElement = null;
 
             // Check plain text nodes
-            $("body").contents().each(function() {
+            $("body").contents().each(function () {
                 if (this.type === "text" && $(this).text().trim() === text) {
                     foundText = true;
                 } else if (foundText && this.name === "table") {
@@ -28,7 +25,7 @@ export async function scrapeVpData(url) {
             });
             // If not found, check text inside tags
             if (!tableElement) {
-                $("body").find("*").each(function() {
+                $("body").find("*").each(function () {
                     if ($(this).children().length === 0 && $(this).text().trim().includes(text)) {
                         foundText = true;
                     } else if (foundText && this.name === "table") {
@@ -45,7 +42,7 @@ export async function scrapeVpData(url) {
         function findTableAfterHr(differentRoomsTable) {
             let result = null;
 
-            $("hr").each(function() {
+            $("hr").each(function () {
                 const nextSibling = this.nextSibling;
                 const nextElement = $(this).next();
                 // Check if the next sibling is either null or a text node with only whitespace
@@ -66,11 +63,10 @@ export async function scrapeVpData(url) {
         }
 
 
-
         function scrapeTableData(table) {
             let rows = [];
 
-            if (table){
+            if (table) {
                 table.find("tr").each((i, row) => {
                     let entries = [];
                     $(row).find("td").each((i, td) => {
@@ -86,9 +82,7 @@ export async function scrapeVpData(url) {
         }
 
 
-
         const cleanText = (text) => text.replace(/\s+/g, " ").trim();
-
 
         const scrapeSchedule = (table) => {
             const changes = [];
@@ -111,32 +105,30 @@ export async function scrapeVpData(url) {
 
                         if (columns.length) {
                             changes.push({
-                                group: currentGroup,
+                                course: currentGroup,
                                 data: columns.filter(col => col !== undefined)
                             });
                         }
                     }
                 });
             } else {
-                return "no table passed";
+                return [];
             }
             return changes;
         };
 
 
-
         const websiteDate = cleanText($('h3').eq(1).text().replace('Vertretungsplan für ', ''));
         const details = cleanText($('big').text());
 
-        const missingTeachersTable= findTableAfterText("fehlende Lehrer:");
+        const missingTeachersTable = findTableAfterText("fehlende Lehrer:");
         const missingClassesTable = findTableAfterText("fehlende Klassen:");
         const missingRoomsTable = findTableAfterText("fehlende Räume:");
         const differentRoomsTable = findTableAfterText("Ersatzraumplan");
         const substitutionsTable = findTableAfterHr(differentRoomsTable);
 
         let scrapedData = {
-            currentDate,
-            currentTime,
+            timestamp,
             websiteDate,
             details,
             missingTeachers: scrapeTableData(missingTeachersTable),
