@@ -1,15 +1,23 @@
 import axios from "axios";
 import * as cheerio from "cheerio";
 
-
+/**
+ * Scrapes data from a vertretungsplan (substitution plan) URL
+ * @param {string} url - The URL to scrape
+ * @returns {Promise<Object|null>} - The scraped data or null if an error occurred
+ */
 export async function scrapeVpData(url) {
     const timestamp = new Date().toISOString(); // ISO 8601 format: YYYY-MM-DDTHH:mm:ss.sssZ
 
     try {
-        const {data} = await axios.get(url);
+        const { data } = await axios.get(url);
         const formattedData = data.replace(/>\s*</g, ">\n<");
         const $ = cheerio.load(formattedData);
 
+        // Helper function to clean text by removing extra whitespace
+        const cleanText = (text) => text.replace(/\s+/g, " ").trim();
+
+        // Find table that follows specific text
         function findTableAfterText(text) {
             let foundText = false;
             let tableElement = null;
@@ -23,6 +31,7 @@ export async function scrapeVpData(url) {
                     return false;
                 }
             });
+
             // If not found, check text inside tags
             if (!tableElement) {
                 $("body").find("*").each(function () {
@@ -37,7 +46,6 @@ export async function scrapeVpData(url) {
 
             return tableElement ? $(tableElement) : null;
         }
-
 
         function findTableAfterHr(differentRoomsTable) {
             let result = null;
@@ -62,13 +70,12 @@ export async function scrapeVpData(url) {
             return result;
         }
 
-
         function scrapeTableData(table) {
-            let rows = [];
+            const rows = [];
 
             if (table) {
                 table.find("tr").each((i, row) => {
-                    let entries = [];
+                    const entries = [];
                     $(row).find("td").each((i, td) => {
                         entries.push($(td).text().trim());
                     });
@@ -81,53 +88,54 @@ export async function scrapeVpData(url) {
             return rows;
         }
 
-
-        const cleanText = (text) => text.replace(/\s+/g, " ").trim();
-
-        const scrapeSchedule = (table) => {
+        function scrapeSchedule(table) {
             const changes = [];
             let currentGroup = "";
 
-            if (table) {
-                table.find("tr").each((index, element) => {
-                    const $element = $(element);
-
-                    if ($element.find("th").length > 0) {
-                        // This is a header row
-                        currentGroup = cleanText($element.find("th").text());
-                    } else {
-                        // This is a data row
-                        const columns = $element.find("td").map((i, el) => {
-                            if (i !== 2) {
-                                return cleanText($(el).text());
-                            }
-                        }).get();
-
-                        if (columns.length) {
-                            changes.push({
-                                course: currentGroup,
-                                data: columns.filter(col => col !== undefined)
-                            });
-                        }
-                    }
-                });
-            } else {
+            if (!table) {
                 return [];
             }
+
+            table.find("tr").each((index, element) => {
+                const $element = $(element);
+
+                if ($element.find("th").length > 0) {
+                    // This is a header row
+                    currentGroup = cleanText($element.find("th").text());
+                } else {
+                    // This is a data row
+                    const columns = $element.find("td").map((i, el) => {
+                        if (i !== 2) {
+                            return cleanText($(el).text());
+                        }
+                        return undefined;
+                    }).get();
+
+                    if (columns.length) {
+                        changes.push({
+                            course: currentGroup,
+                            data: columns.filter(col => col !== undefined)
+                        });
+                    }
+                }
+            });
+
             return changes;
-        };
+        }
 
-
+        // Extract key information
         const websiteDate = cleanText($('h3').eq(1).text().replace('Vertretungsplan für ', ''));
         const details = cleanText($('big').text());
 
+        // Find relevant tables
         const missingTeachersTable = findTableAfterText("fehlende Lehrer:");
         const missingClassesTable = findTableAfterText("fehlende Klassen:");
         const missingRoomsTable = findTableAfterText("fehlende Räume:");
         const differentRoomsTable = findTableAfterText("Ersatzraumplan");
         const substitutionsTable = findTableAfterHr(differentRoomsTable);
 
-        let scrapedData = {
+        // Assemble the result
+        const scrapedData = {
             timestamp,
             websiteDate,
             details,
@@ -143,6 +151,12 @@ export async function scrapeVpData(url) {
 
     } catch (error) {
         console.error("Error fetching or parsing the HTML:", error);
+        return {
+            timestamp,
+            error: true,
+            message: error.message,
+            status: error.response?.status
+        };
     }
 }
 
