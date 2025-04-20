@@ -163,6 +163,7 @@ router.get('/vpSubstitutions/:courseName', async (req, res) => {
     }
 })
 // dev
+/* //ist noch alt, mit data, funktioniert so nicht
 router.post('/vpSubstitutions', async (req, res) => {
     console.log('Received trigger update');
     try {
@@ -176,7 +177,7 @@ router.post('/vpSubstitutions', async (req, res) => {
         res.status(500).json({success: false, message: 'Failed to trigger update'});
     }
 })
-
+*/
 
 router.get('/vp', async (req, res) => {
     try {

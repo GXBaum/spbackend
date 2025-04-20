@@ -303,14 +303,14 @@ const getVpDifferences = async (day) => {
     }
 }
 
-const insertVpSubstitution = async (courseName, data) => {
+const insertVpSubstitution = async (courseName, day, timestamp, hour, original, replacement, description) => {
     const db = getDb();
     try {
         await execute(
             db,
-            `INSERT INTO ${TABLE_NAMES.VP_SUBSTITUTION} (course_name, data)
-             VALUES (?, ?)`,
-            [courseName, data]
+            `INSERT INTO ${TABLE_NAMES.VP_SUBSTITUTION} (course_name, day, timestamp, hour, original, replacement, description)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [courseName, day, timestamp, hour, original, replacement, description]
         );
     } finally {
         db.close();
@@ -320,7 +320,7 @@ const getVpSubstitutions = async (courseName) => {
     const db = getDb();
     try {
         return new Promise((resolve, reject) => {
-            db.all(`SELECT data FROM ${TABLE_NAMES.VP_SUBSTITUTION} WHERE course_name = ?`, [courseName], (err, rows) => {
+            db.all(`SELECT hour, original, replacement, description FROM ${TABLE_NAMES.VP_SUBSTITUTION} WHERE course_name = ?`, [courseName], (err, rows) => {
                 if (err) {
                     reject(err);
                 } else {

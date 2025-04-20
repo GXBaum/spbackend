@@ -123,9 +123,9 @@ export const createTables = async () => {
              (
                  substitution_id INTEGER PRIMARY KEY,
                  course_name TEXT NOT NULL,
-                 day TEXT PRIMARY KEY NOT NULL CHECK (day IN ('today', 'tomorrow')),
+                 day TEXT NOT NULL CHECK (day IN ('today', 'tomorrow')),
                  timestamp TEXT NOT NULL,
-                                  
+                 
                  hour TEXT NOT NULL,
                  original TEXT NOT NULL,
                  replacement TEXT NOT NULL,
