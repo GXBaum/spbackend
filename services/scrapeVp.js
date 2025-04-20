@@ -135,7 +135,8 @@ export async function scrapeVpData(url) {
         const substitutionsTable = findTableAfterHr(differentRoomsTable);
 
         // Assemble the result
-        const scrapedData = {
+        return {
+            rawPage: data.toString(),
             timestamp,
             websiteDate,
             details,
@@ -144,10 +145,7 @@ export async function scrapeVpData(url) {
             missingRooms: scrapeTableData(missingRoomsTable),
             differentRooms: scrapeSchedule(differentRoomsTable),
             substitutions: scrapeSchedule(substitutionsTable),
-        };
-
-        console.log(scrapedData);
-        return scrapedData
+        }
 
     } catch (error) {
         console.error("Error fetching or parsing the HTML:", error);

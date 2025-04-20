@@ -3,6 +3,7 @@ import {sendNotificationToUser} from "../services/notifications.js";
 import {updateAllSpUserData} from "../services/updateAllSpUserData.js";
 import db from "../db/insert.js"
 import {scrapeVpData} from "../services/scrapeVp.js";
+import {vpCheckForDifferences} from "../services/vpCheckForDifferences.js";
 
 const router = express.Router();
 
@@ -74,17 +75,6 @@ router.get('/users/:username/courses', async (req, res) => {
     });
 })
 
-
-router.get('/vp', async (req, res) => {
-    try {
-        const data = await scrapeVpData("https://www.kleist-schule.de/vertretungsplan/schueler/aktuelle%20plaene/1/vp.html");
-        res.status(200).json({ success: true, data });
-    } catch (error) {
-        console.error('Error scraping VP data:', error);
-        res.status(500).json({ success: false, message: 'Failed to fetch VP data' });
-    }
-});
-
 router.get('/users/:username/vpSelectedCourses', async (req, res) => {
     const { username } = req.params;
 
@@ -141,6 +131,63 @@ router.get('/sendNotification' , (req, res) => {
             res.status(500).json({ success: false, message: 'Failed to send notification' });
         });
 });
+
+// dev
+router.get('/vpUpdate', async (req, res) => {
+    console.log('Received trigger update');
+    try {
+        const data = await vpCheckForDifferences();
+        res.status(200).json({success: true, message: data});
+    } catch (error) {
+        console.error('Error sending notification:', error);
+        res.status(500).json({success: false, message: 'Failed to trigger update'});
+    }
+})
+
+// dev
+router.get('/vpSubstitutions/:courseName', async (req, res) => {
+    const { courseName } = req.params;
+
+    //  url decode
+    const decodedCourseName = decodeURIComponent(courseName);
+
+    console.log('decoded Received trigger update for course:', decodedCourseName);
+
+    try {
+        const data = await db.getVpSubstitutions(decodedCourseName);
+        console.log(data)
+        res.status(200).json({success: true, substitutions: data});
+    } catch (error) {
+        console.error('Error sending notification:', error);
+        res.status(500).json({success: false, message: 'Failed to trigger update'});
+    }
+})
+// dev
+router.post('/vpSubstitutions', async (req, res) => {
+    console.log('Received trigger update');
+    try {
+        const { courseName, data } = req.body;
+
+        console.log('Received trigger update, courseName:', courseName, 'data:', data);
+        await db.insertVpSubstitution(courseName, data);
+        res.status(200).json({success: true, message: "Inserted"});
+    } catch (error) {
+        console.error('Error sending notification:', error);
+        res.status(500).json({success: false, message: 'Failed to trigger update'});
+    }
+})
+
+
+router.get('/vp', async (req, res) => {
+    try {
+        const data = await scrapeVpData("https://www.kleist-schule.de/vertretungsplan/schueler/aktuelle%20plaene/1/vp.html");
+        res.status(200).json({ success: true, data });
+    } catch (error) {
+        console.error('Error scraping VP data:', error);
+        res.status(500).json({ success: false, message: 'Failed to fetch VP data' });
+    }
+});
+
 
 
 

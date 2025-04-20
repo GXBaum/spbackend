@@ -271,6 +271,96 @@ const getUserVpSelectedCourses = async (spUsername) => {
     }
 }
 
+
+const insertVpDifferences = async (day, data) => {
+    const db = getDb();
+    try {
+        await execute(
+            db,
+            `INSERT OR REPLACE INTO ${TABLE_NAMES.VP_DIFFERENCES} (day, data)
+             VALUES (?, ?)`,
+            [day, data]
+        );
+    } finally {
+        db.close();
+    }
+}
+const getVpDifferences = async (day) => {
+    const db = getDb();
+    try {
+        return new Promise((resolve, reject) => {
+            db.get(`SELECT data FROM ${TABLE_NAMES.VP_DIFFERENCES} WHERE day = ?`, [day], (err, row) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    //resolve(row);
+                    resolve(row ? row.data : null); // Extract just the data field
+                }
+            });
+        });
+    } finally {
+        db.close();
+    }
+}
+
+const insertVpSubstitution = async (courseName, data) => {
+    const db = getDb();
+    try {
+        await execute(
+            db,
+            `INSERT INTO ${TABLE_NAMES.VP_SUBSTITUTION} (course_name, data)
+             VALUES (?, ?)`,
+            [courseName, data]
+        );
+    } finally {
+        db.close();
+    }
+}
+const getVpSubstitutions = async (courseName) => {
+    const db = getDb();
+    try {
+        return new Promise((resolve, reject) => {
+            db.all(`SELECT data FROM ${TABLE_NAMES.VP_SUBSTITUTION} WHERE course_name = ?`, [courseName], (err, rows) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(rows);
+                }
+            });
+        });
+    } finally {
+        db.close();
+    }
+}
+const deleteVpSubstitutionsForDay = async (day) => {
+    const db = getDb();
+    try {
+        await execute(
+            db,
+            `DELETE FROM ${TABLE_NAMES.VP_SUBSTITUTION} WHERE day = ?`,
+            [day]
+        );
+    } finally {
+        db.close();
+    }
+}
+
+const deleteVpSubstitutionsForCourseName = async (courseName) => {
+    const db = getDb();
+    try {
+        await execute(
+            db,
+            `DELETE FROM ${TABLE_NAMES.VP_SUBSTITUTION} WHERE course_name = ?`,
+            [courseName]
+        );
+    } finally {
+        db.close();
+    }
+}
+
+
+
+
 // Export all functions as a single object
 export default {
     insertUser,
@@ -288,5 +378,11 @@ export default {
     getUserCourses,
     getUserCourseNames,
     insertUserVpSelectedCourses,
-    getUserVpSelectedCourses
+    getUserVpSelectedCourses,
+    insertVpDifferences,
+    getVpDifferences,
+    insertVpSubstitution,
+    getVpSubstitutions,
+    deleteVpSubstitutionsForDay,
+    deleteVpSubstitutionsForCourseName,
 };

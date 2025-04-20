@@ -110,14 +110,30 @@ export const createTables = async () => {
 
         await execute(
             db,
-            `CREATE TABLE IF NOT EXISTS ${TABLE_NAMES.VP_TEST}
-             (
-                 entry_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                 courseName TEXT NOT NULL,
+            `CREATE TABLE IF NOT EXISTS ${TABLE_NAMES.VP_DIFFERENCES}(
+                 day TEXT PRIMARY KEY NOT NULL CHECK (day IN ('today', 'tomorrow')),
                  data TEXT NOT NULL
-             
              )`
         );
+
+        // TODO: alles ändern, dass ist arsch
+        await execute(
+            db,
+            `CREATE TABLE IF NOT EXISTS ${TABLE_NAMES.VP_SUBSTITUTION}
+             (
+                 substitution_id INTEGER PRIMARY KEY,
+                 course_name TEXT NOT NULL,
+                 day TEXT PRIMARY KEY NOT NULL CHECK (day IN ('today', 'tomorrow')),
+                 timestamp TEXT NOT NULL,
+                                  
+                 hour TEXT NOT NULL,
+                 original TEXT NOT NULL,
+                 replacement TEXT NOT NULL,
+                 description TEXT NOT NULL
+             )`
+        );
+
+
 
     } catch (error) {
         console.log(error);
