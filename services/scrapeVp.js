@@ -112,9 +112,20 @@ export async function scrapeVpData(url) {
                     }).get();
 
                     if (columns.length) {
-                        changes.push({
+                        /*changes.push({
                             course: currentGroup,
                             data: columns.filter(col => col !== undefined)
+                        });
+                        */
+                        const filteredColumns = columns.filter(col => col !== undefined);
+                        changes.push({
+                            course: currentGroup,
+                            hour: filteredColumns[0],
+                            original: filteredColumns[1],
+                            replacement: filteredColumns[2],
+                            description: filteredColumns[3],
+                            // Keep the raw data array for backward compatibility if needed
+                            data: filteredColumns
                         });
                     }
                 }

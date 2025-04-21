@@ -51,12 +51,9 @@ export async function updateAllSpUserData(SpUsername, SpPassword, schoolId= 6078
             console.log("user:", SpUsername);
             const existingMarks = await db.getUserMarks(SpUsername);
             console.log("Existing marks:", existingMarks.length);
-            console.log(existingMarks);
             const existingMarksForHalfYear = existingMarks.filter(mark => mark.half_year === halfYearToProcess);
 
             console.log("Existing marks for half year:", halfYearToProcess);
-            console.log(existingMarksForHalfYear);
-
 
             // Store all new marks for this half year
             const newMarksForHalfYear = [];
@@ -129,7 +126,6 @@ export async function updateAllSpUserData(SpUsername, SpPassword, schoolId= 6078
             // Insert all new marks
             for (const mark of newMarksForHalfYear) {
                 console.log("Inserting mark:", JSON.stringify(mark));
-                console.log("mark:" + mark);
                 const res = await db.insertMark(mark)
                 //console.log("Inserted mark:", res);
 

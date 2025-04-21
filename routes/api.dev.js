@@ -136,7 +136,8 @@ router.get('/sendNotification' , (req, res) => {
 router.get('/vpUpdate', async (req, res) => {
     console.log('Received trigger update');
     try {
-        const data = await vpCheckForDifferences();
+        const data = await vpCheckForDifferences(1);
+        await vpCheckForDifferences(2)
         res.status(200).json({success: true, message: data});
     } catch (error) {
         console.error('Error sending notification:', error);
@@ -154,7 +155,8 @@ router.get('/vpSubstitutions/:courseName', async (req, res) => {
     console.log('decoded Received trigger update for course:', decodedCourseName);
 
     try {
-        const data = await db.getVpSubstitutions(decodedCourseName);
+        // TODO: remove hard coded day
+        const data = await db.getVpSubstitutions(decodedCourseName, "today");
         console.log(data)
         res.status(200).json({success: true, substitutions: data});
     } catch (error) {

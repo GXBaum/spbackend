@@ -38,8 +38,10 @@ async function startServer() {
 
       // Schedule periodic updates with error handling
       try {
-        const updateJob = scheduleUpdates();
-        console.log('Update job scheduled:', updateJob);
+        const { job, vpJob } = scheduleUpdates();
+
+        console.log('Update job scheduled:', job);
+        console.log('VP job scheduled:', vpJob);
 
       } catch (scheduleError) {
         console.error('Failed to schedule updates:', scheduleError);

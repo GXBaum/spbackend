@@ -83,7 +83,6 @@ const insertUserCourse = async (spUsername, courseId) => {
 
 // Insert mark
 const insertMark = async ({name, date, grade, courseId, SpUsername, halfYear}) => {
-    console.log("insertMark", {name, date, grade, courseId, SpUsername, halfYear});
     const db = getDb();
     try {
         await execute(
@@ -303,24 +302,28 @@ const getVpDifferences = async (day) => {
     }
 }
 
-const insertVpSubstitution = async (courseName, day, timestamp, hour, original, replacement, description) => {
+const insertVpSubstitution = async (courseName, day, timestamp, hour, original, replacement, description, vpDate) => {
     const db = getDb();
     try {
         await execute(
             db,
-            `INSERT INTO ${TABLE_NAMES.VP_SUBSTITUTION} (course_name, day, timestamp, hour, original, replacement, description)
-             VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            [courseName, day, timestamp, hour, original, replacement, description]
+            `INSERT INTO ${TABLE_NAMES.VP_SUBSTITUTION} (course_name, day, timestamp, hour, original, replacement, description, vp_date)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [courseName, day, timestamp, hour, original, replacement, description, vpDate]
         );
     } finally {
         db.close();
     }
 }
-const getVpSubstitutions = async (courseName) => {
+
+// TODO: mit vp_tag abgleichen, momentan schickt er alte tage mit.
+const getVpSubstitutions = async (courseName, day) => {
     const db = getDb();
     try {
         return new Promise((resolve, reject) => {
-            db.all(`SELECT hour, original, replacement, description FROM ${TABLE_NAMES.VP_SUBSTITUTION} WHERE course_name = ?`, [courseName], (err, rows) => {
+            db.all(`SELECT hour, original, replacement, description, vp_date FROM ${TABLE_NAMES.VP_SUBSTITUTION} WHERE course_name = ? AND day = ?`,
+                [courseName, day],
+                (err, rows) => {
                 if (err) {
                     reject(err);
                 } else {
@@ -358,6 +361,28 @@ const deleteVpSubstitutionsForCourseName = async (courseName) => {
     }
 }
 
+const getUsersWithVPCourseName = async (courseName) => {
+    const db = getDb();
+    try {
+        return new Promise((resolve, reject) => {
+            db.all(
+                `SELECT sp_username FROM ${TABLE_NAMES.USER_VP_SELECTED_COURSES} WHERE course_name = ?`,
+                [courseName],
+                 (err, rows) => {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        resolve(rows);
+                    }
+                }
+            );
+        });
+    } finally {
+        db.close();
+    }
+};
+
+
 
 
 
@@ -385,4 +410,5 @@ export default {
     getVpSubstitutions,
     deleteVpSubstitutionsForDay,
     deleteVpSubstitutionsForCourseName,
+    getUsersWithVPCourseName,
 };

@@ -1,11 +1,14 @@
 import schedule from "node-schedule";
 import {updateAllSpUserData} from "./updateAllSpUserData.js";
 import db from "../db/insert.js";
+import {vpCheckForDifferences} from "./vpCheckForDifferences.js";
 
 export function scheduleUpdates() {
     // Configuration variables (could be moved to environment variables)
-    const updateInterval = process.env.UPDATE_INTERVAL || '*/5 * * * *'; // Default: every 15 minutes
+    const updateInterval = '*/5 * * * *'; // every 5 minutes
     const concurrentUpdates = parseInt(process.env.CONCURRENT_UPDATES || '3', 10);
+
+    const vpUpdateInterval = '*/5 * * * * *'; // Default: every 5 seconds
 
     console.log(`Updates scheduled with pattern: ${updateInterval}, concurrent updates: ${concurrentUpdates}`);
 
@@ -49,11 +52,24 @@ export function scheduleUpdates() {
         }
     });
 
+    // new job for vp
+    const vpJob = schedule.scheduleJob(vpUpdateInterval, async () => {
+        console.log('Running scheduled VP update job at', new Date().toISOString());
+
+        try {
+            await vpCheckForDifferences(1); // Check for today
+            await vpCheckForDifferences(2); // Check for tomorrow
+        } catch (error) {
+            console.error('Scheduled VP update failed:', error);
+        }
+
+    });
+
     // Add a method to the job to manually trigger an update
     job.runNow = async () => {
         console.log('Manually triggering update job');
         await job.invoke();
     };
 
-    return job;
+    return { job, vpJob };
 }

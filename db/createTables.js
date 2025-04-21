@@ -126,6 +126,8 @@ export const createTables = async () => {
                  day TEXT NOT NULL CHECK (day IN ('today', 'tomorrow')),
                  timestamp TEXT NOT NULL,
                  
+                 vp_date TEXT NOT NULL,
+                 
                  hour TEXT NOT NULL,
                  original TEXT NOT NULL,
                  replacement TEXT NOT NULL,
