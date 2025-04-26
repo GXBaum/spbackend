@@ -15,24 +15,20 @@ export async function vpCheckForDifferences(day) {
         stringDay = "tomorrow"
     }
 
-
-
-    // TODO: change back
-    const oldRawData = ""//await db.getVpDifferences(stringDay");
+    const oldRawData = await db.getVpDifferences(stringDay);
 
     if (oldRawData === data.rawPage) {
         console.log("no changes");
         return
     }
     console.log("changes detected")
-
     await db.insertVpDifferences(stringDay, data.rawPage);
 
     const timestamp = new Date().toISOString();
 
     let usernames = [];
     for (const substitution of data.substitutions) {
-        const oldData = await db.getVpSubstitutions(substitution.course, stringDay);
+        const oldData = await db.getVpSubstitutions(substitution.course, stringDay, data.websiteDate);
 
         function areSubstitutionsEqual(sub1, sub2) {
             return sub1.hour === sub2.hour &&
@@ -40,15 +36,13 @@ export async function vpCheckForDifferences(day) {
                 sub1.replacement === sub2.replacement &&
                 sub1.description === sub2.description &&
                 sub1.vp_date === data.websiteDate
-                //sub1.course === sub2.course; // unnötig eigentlich
         }
         if (oldData && oldData.some(oldSubstitution => areSubstitutionsEqual(oldSubstitution, substitution))) {
-            console.log("substitution already exists", substitution.course);
+            // substitution already exists in the database
             continue;
         }
 
         console.log("new substitution", JSON.stringify(substitution));
-        console.log(data.websiteDate)
         await db.insertVpSubstitution(substitution.course, stringDay, timestamp, substitution.hour, substitution.original, substitution.replacement, substitution.description, data.websiteDate);
 
         const users = await db.getUsersWithVPCourseName(substitution.course)
@@ -66,7 +60,7 @@ export async function vpCheckForDifferences(day) {
 
         const userCourses = await db.getUserVpSelectedCourses(username);
         const courseNames = userCourses.map(course => course.course_name);
-        const substitutions = await db.getVpSubstitutions(courseNames[0], stringDay);
+        const substitutions = await db.getVpSubstitutions(courseNames[0], stringDay, data.websiteDate);
 
         console.log("user courses", userCourses);
         console.log("user substitutions", substitutions);

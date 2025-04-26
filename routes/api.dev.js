@@ -146,8 +146,21 @@ router.get('/vpUpdate', async (req, res) => {
 })
 
 // dev
-router.get('/vpSubstitutions/:courseName', async (req, res) => {
-    const { courseName } = req.params;
+router.get('/vpSubstitutions/:courseName/:day', async (req, res) => {
+    const { courseName, day } = req.params;
+
+    if (day !== "today" && day !== "tomorrow") {
+        return res.status(400).json({success: false, message: 'Invalid day'});
+    }
+    let dayInt;
+    if (day === "today") {
+        console.log("checking for today");
+        dayInt = 1
+    } else if (day === "tomorrow") {
+        console.log("checking for tomorrow");
+        dayInt = 2
+    }
+
 
     //  url decode
     const decodedCourseName = decodeURIComponent(courseName);
@@ -155,8 +168,11 @@ router.get('/vpSubstitutions/:courseName', async (req, res) => {
     console.log('decoded Received trigger update for course:', decodedCourseName);
 
     try {
-        // TODO: remove hard coded day
-        const data = await db.getVpSubstitutions(decodedCourseName, "today");
+        // TODO: remove hard coded day and vp_date
+        const vpDate = await scrapeVpData(`https://www.kleist-schule.de/vertretungsplan/schueler/aktuelle%20plaene/${dayInt}/vp.html`);
+
+
+        const data = await db.getVpSubstitutions(decodedCourseName, day, vpDate.websiteDate);
         console.log(data)
         res.status(200).json({success: true, substitutions: data});
     } catch (error) {
@@ -190,6 +206,7 @@ router.get('/vp', async (req, res) => {
         res.status(500).json({ success: false, message: 'Failed to fetch VP data' });
     }
 });
+
 
 
 

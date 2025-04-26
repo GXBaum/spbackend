@@ -135,6 +135,7 @@ export async function scrapeVpData(url) {
         }
 
         // Extract key information
+        //const websiteDate = "Freitag, 04. Apr 2025"
         const websiteDate = cleanText($('h3').eq(1).text().replace('Vertretungsplan für ', ''));
         const details = cleanText($('big').text());
 
