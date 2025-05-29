@@ -34,7 +34,7 @@ router.get('/users/:username/marks', async (req, res) => {
     db.getUserMarks(username).then((marks) => {
         console.log('Marks:', marks);
         res.status(200).json({success: true, marks});
-        sendNotificationToUser("Rafael.Beckmann", "user Noten angefragt", username, "high")
+        sendNotificationToUser("Rafael.Beckmann", "user Noten angefragt", username, "high", {})
     }).catch((error) => {
         console.error('Error getting marks:', error);
         res.status(500).json({success: false, message: 'Failed to get marks'});
@@ -50,6 +50,9 @@ router.get('/users/:username/:courseId/marks', async (req, res) => {
     db.getUserMarksForCourse(username, courseId).then((marks) => {
         console.log('Marks:', marks);
         res.status(200).json({success: true, marks});
+
+        sendNotificationToUser("Rafael.Beckmann", "user Noten angefragt", username, "high", {})
+
     }).catch((error) => {
         console.error('Error getting marks:', error);
         res.status(500).json({success: false, message: 'Failed to get marks'});
@@ -122,7 +125,7 @@ router.get('/triggerUpdate', async (req, res) => {
 // dev
 router.get('/sendNotification' , (req, res) => {
 
-    sendNotificationToUser("Rafael.Beckmann", "test", "test", "high", "1")
+    sendNotificationToUser("Rafael.Beckmann", "test", "test", "high", {"mark": "1"})
         .then(() => {
             res.status(200).json({ success: true, message: 'Notification sent successfully' });
         })
@@ -131,6 +134,19 @@ router.get('/sendNotification' , (req, res) => {
             res.status(500).json({ success: false, message: 'Failed to send notification' });
         });
 });
+
+router.get('/sendNotification2' , (req, res) => {
+
+    sendNotificationToUser("Rafael.Beckmann", "test", "test", "high", {"open_vp": "rejgf"})
+        .then(() => {
+            res.status(200).json({ success: true, message: 'Notification sent successfully' });
+        })
+        .catch(error => {
+            console.error('Error sending notification:', error);
+            res.status(500).json({ success: false, message: 'Failed to send notification' });
+        });
+});
+
 
 // dev
 router.get('/vpUpdate', async (req, res) => {

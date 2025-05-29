@@ -65,12 +65,13 @@ export async function vpCheckForDifferences(day) {
         console.log("user courses", userCourses);
         console.log("user substitutions", substitutions);
 
+        // TODO: gleiche vertretungen aus einer doppelstunde zusammenfassen. bsp: 1/2: Gl D → ----- (Auftrag)
         const message = substitutions.map(substitution =>
             `${substitution.hour}: ${substitution.original} → ${substitution.replacement} (${substitution.description})`
         ).join('\n');
 
 
-        await sendNotificationToUser(username, `Vertretung für ${stringDay}`, message, "high", "18");
+        await sendNotificationToUser(username, `Vertretung für ${stringDay}`, message, "high", {"open_vp": true});
     }
 
 }

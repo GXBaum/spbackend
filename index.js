@@ -31,7 +31,7 @@ async function startServer() {
         const testTitle = 'Server online';
         const testMessage = 'This is a test notification.';
         const testPriority = 'high';
-        sendNotificationToUser(testUserId, testTitle, testMessage, testPriority)
+        sendNotificationToUser(testUserId, testTitle, testMessage, testPriority, {})
           .then(() => console.log('Test notification sent'))
           .catch((err) => console.error('Test notification error:', err));
       }
