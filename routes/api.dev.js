@@ -137,7 +137,7 @@ router.get('/sendNotification' , (req, res) => {
 
 router.get('/sendNotification2' , (req, res) => {
 
-    sendNotificationToUser("Rafael.Beckmann", "test", "test", "high", {"open_vp": "rejgf"})
+    sendNotificationToUser("Rafael.Beckmann", "ghrzjrth", "test", "high", {"open_vp": true})
         .then(() => {
             res.status(200).json({ success: true, message: 'Notification sent successfully' });
         })
@@ -184,13 +184,38 @@ router.get('/vpSubstitutions/:courseName/:day', async (req, res) => {
     console.log('decoded Received trigger update for course:', decodedCourseName);
 
     try {
-        // TODO: remove hard coded day and vp_date
         const vpDate = await scrapeVpData(`https://www.kleist-schule.de/vertretungsplan/schueler/aktuelle%20plaene/${dayInt}/vp.html`);
 
 
         const data = await db.getVpSubstitutions(decodedCourseName, day, vpDate.websiteDate);
         console.log(data)
         res.status(200).json({success: true, substitutions: data});
+    } catch (error) {
+        console.error('Error sending notification:', error);
+        res.status(500).json({success: false, message: 'Failed to trigger update'});
+    }
+})
+
+// TODO: das hier gut machen, ist noch größtenteils kopiert von oben
+router.get('/vpSubstitutions/:courseName', async (req, res) => {
+    const { courseName } = req.params;
+
+    //  url decode
+    const decodedCourseName = decodeURIComponent(courseName);
+    console.log('decoded Received trigger update for course:', decodedCourseName);
+
+    try {
+        let vals = [];
+        for (let dayInt = 1; dayInt <= 2; dayInt++) {
+            const vpDate = await scrapeVpData(`https://www.kleist-schule.de/vertretungsplan/schueler/aktuelle%20plaene/${dayInt}/vp.html`);
+            const day = dayInt === 1 ? "today" : "tomorrow";
+            console.log(`Fetching substitutions for ${decodedCourseName} on ${day}`);
+            const data = await db.getVpSubstitutions(decodedCourseName, day, vpDate.websiteDate);
+            vals.push(data);
+        }
+
+        res.status(200).json({success: true, substitutions: vals});
+
     } catch (error) {
         console.error('Error sending notification:', error);
         res.status(500).json({success: false, message: 'Failed to trigger update'});

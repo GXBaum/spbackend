@@ -320,7 +320,7 @@ const getVpSubstitutions = async (courseName, day, websiteDate) => {
     const db = getDb();
     try {
         return new Promise((resolve, reject) => {
-            db.all(`SELECT hour, original, replacement, description, vp_date FROM ${TABLE_NAMES.VP_SUBSTITUTION} WHERE course_name = ? AND day = ? AND vp_date = ?`,
+            db.all(`SELECT hour, original, replacement, description, vp_date FROM ${TABLE_NAMES.VP_SUBSTITUTION} WHERE course_name = ? AND day = ? AND vp_date = ? ORDER BY CAST(hour AS INTEGER)`,
                 [courseName, day, websiteDate],
                 (err, rows) => {
                 if (err) {
