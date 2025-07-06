@@ -1,5 +1,5 @@
 {
-  "name": "sp mit requests",
+  "name": "sp-mit-requests",
   "version": "1.0.0",
   "type": "module",
   "description": "",
@@ -15,6 +15,7 @@
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "firebase-admin": "^13.2.0",
+    "jsonwebtoken": "^9.0.2",
     "node-fetch": "^3.3.2",
     "node-rsa": "^1.1.1",
     "node-schedule": "^2.1.1",

@@ -135,6 +135,17 @@ export const createTables = async () => {
              )`
         );
 
+        await execute(
+            db,
+            `CREATE TABLE IF NOT EXISTS ${TABLE_NAMES.REFRESH_TOKEN}
+                 (
+                     token       TEXT PRIMARY KEY,
+                     sp_username TEXT NOT NULL,
+                     expires_at  TEXT NOT NULL,
+                     FOREIGN KEY (sp_username) REFERENCES ${TABLE_NAMES.USER} (sp_username) ON DELETE CASCADE
+                 )`
+        );
+
 
 
     } catch (error) {

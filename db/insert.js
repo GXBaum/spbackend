@@ -2,6 +2,8 @@ import {DB_PATH, TABLE_NAMES} from "../config/constants.js";
 import {execute} from "./sql.js";
 import sqlite from "sqlite3";
 
+// TODO: diese ineffiziente scheiße fixen, es macht immer neue db connections
+
 // Helper function to get database connection
 const getDb = () => new sqlite.Database(DB_PATH);
 
@@ -11,10 +13,28 @@ const insertUser = async (spUsername, spPassword, notificationsEnabled = 0) => {
     try {
         await execute(
             db,
-            `INSERT OR REPLACE INTO ${TABLE_NAMES.USER} (sp_username, sp_password, notifications_enabled)
+            `INSERT INTO ${TABLE_NAMES.USER} (sp_username, sp_password, notifications_enabled)
              VALUES (?, ?, ?)`,
             [spUsername, spPassword, notificationsEnabled]
         );
+    } finally {
+        db.close();
+    }
+};
+
+// TODO: ich glaube diese Funktion gibt es schon
+const getUserByUsername = async (spUsername) => {
+    const db = getDb();
+    try {
+        return new Promise((resolve, reject) => {
+            db.get(`SELECT * FROM ${TABLE_NAMES.USER} WHERE sp_username = ?`, [spUsername], (err, row) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(row);
+                }
+            });
+        });
     } finally {
         db.close();
     }
@@ -257,11 +277,13 @@ const getUserVpSelectedCourses = async (spUsername) => {
     const db = getDb();
     try {
         return new Promise((resolve, reject) => {
-            db.all(`SELECT * FROM ${TABLE_NAMES.USER_VP_SELECTED_COURSES} WHERE sp_username = ?`, [spUsername], (err, rows) => {
+            db.all(`SELECT course_name FROM ${TABLE_NAMES.USER_VP_SELECTED_COURSES} WHERE sp_username = ?`,
+                [spUsername],
+                (err, rows) => {
                 if (err) {
                     reject(err);
                 } else {
-                    resolve(rows);
+                    resolve(rows.map(row => row.course_name));
                 }
             });
         });
@@ -401,6 +423,54 @@ const getVpLatestVpDate = async () => {
     }
 };
 
+// ... other functions in db/insert.js
+
+const storeRefreshToken = async (token, spUsername, expiresAt) => {
+    const db = getDb();
+    try {
+        await execute(
+            db,
+            `INSERT INTO ${TABLE_NAMES.REFRESH_TOKEN} (token, sp_username, expires_at)
+             VALUES (?, ?, ?)`,
+            [token, spUsername, expiresAt]
+        );
+    } finally {
+        db.close();
+    }
+};
+
+const getRefreshToken = async (token) => {
+    const db = getDb();
+    try {
+        return new Promise((resolve, reject) => {
+            db.get(`SELECT * FROM ${TABLE_NAMES.REFRESH_TOKEN} WHERE token = ?`, [token], (err, row) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(row);
+                }
+            });
+        });
+    } finally {
+        db.close();
+    }
+};
+
+const deleteRefreshToken = async (token) => {
+    const db = getDb();
+    try {
+        await execute(
+            db,
+            `DELETE FROM ${TABLE_NAMES.REFRESH_TOKEN} WHERE token = ?`,
+            [token]
+        );
+    } finally {
+        db.close();
+    }
+};
+
+
+
 
 
 // Export all functions as a single object
@@ -428,5 +498,9 @@ export default {
     deleteVpSubstitutionsForDay,
     deleteVpSubstitutionsForCourseName,
     getUsersWithVPCourseName,
-    getVpLatestVpDate
+    getVpLatestVpDate,
+    getUserByUsername,
+    storeRefreshToken,
+    getRefreshToken,
+    deleteRefreshToken
 };

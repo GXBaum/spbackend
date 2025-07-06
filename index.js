@@ -6,6 +6,8 @@ import { scheduleUpdates } from './services/scheduleUpdates.js';
 import apiDevRoutes from './routes/api.dev.js';
 import {createTables} from "./db/createTables.js";
 
+import 'dotenv/config';
+
 const app = express();
 app.use(express.json());
 app.use('/api/dev', apiDevRoutes);

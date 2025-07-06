@@ -14,4 +14,5 @@ export const TABLE_NAMES = {
     USER_VP_SELECTED_COURSES: "user_vp_selected_courses",
     VP_DIFFERENCES: "vp_differences",
     VP_SUBSTITUTION: "vp_substitution",
+    REFRESH_TOKEN: "refresh_token"
 };

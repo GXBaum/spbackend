@@ -7,6 +7,7 @@ import fetch from "node-fetch";
 import {USER_AGENT} from "../config/constants.js";
 import * as cheerio from "cheerio";
 import db from "../db/insert.js";
+import {spGetMessages} from "./messagesOldReinkopiert.js";
 export async function updateAllSpUserData(SpUsername, SpPassword, schoolId= 6078) {
     try {
         console.time('Script');
@@ -147,6 +148,13 @@ export async function updateAllSpUserData(SpUsername, SpPassword, schoolId= 6078
             await db.insertCourseTeacher(relation.courseId, relation.teacherId);
         }
         console.timeEnd("getTeachers");
+
+
+        try {
+            await spGetMessages(loginCookies);
+        } catch (error) {
+            console.error("Error fetching messages:", error);
+        }
 
 
 

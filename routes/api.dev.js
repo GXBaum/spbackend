@@ -4,11 +4,40 @@ import {updateAllSpUserData} from "../services/updateAllSpUserData.js";
 import db from "../db/insert.js"
 import {scrapeVpData} from "../services/scrapeVp.js";
 import {vpCheckForDifferences} from "../services/vpCheckForDifferences.js";
+import {authenticateToken, authorizeUser, login, refreshToken} from '../auth.js';
 
 const router = express.Router();
 
-// TODO: Add authentication middleware, and check if user exists
-router.put('/users/:username/notification-token', async (req, res) => {
+router.use((req, res, next) => {
+    console.log(`Incoming request: ${req.method} ${req.originalUrl}`);
+    next();
+});
+
+// User registration
+router.post('/users', async (req, res) => {
+    const { username, password, isNotificationEnabled  } = req.body;
+
+    console.log('Received user creation request:', username);
+
+    if (!username || !password || isNotificationEnabled === undefined) {
+        return res.status(400).json({ success: false, message: 'Username, password and isNotificationEnabled are required' });
+    }
+
+    try {
+        await db.insertUser(username, password, isNotificationEnabled,);
+        console.log('User created successfully');
+        res.status(201).json({ success: true, message: 'User created successfully' });
+    } catch (error) {
+        console.error('Error creating user:', error);
+        res.status(500).json({ success: false, message: 'Failed to create user' });
+    }
+});
+
+router.post('/auth/login', login);
+
+router.post('/auth/token',  refreshToken);
+
+router.put('/users/:username/notification-token', authenticateToken, authorizeUser, async (req, res) => {
     const { username } = req.params;
     const { token } = req.body;
 
@@ -26,7 +55,8 @@ router.put('/users/:username/notification-token', async (req, res) => {
     }
 });
 
-router.get('/users/:username/marks', async (req, res) => {
+// TODO: beide zusammenlegen mit query params
+router.get('/users/:username/marks', authenticateToken, authorizeUser, (req, res) => {
     const { username } = req.params;
 
     console.log('Received :', username);
@@ -41,60 +71,53 @@ router.get('/users/:username/marks', async (req, res) => {
     });
 })
 
-router.get('/users/:username/:courseId/marks', async (req, res) => {
+router.get('/users/:username/:courseId/marks', authenticateToken, authorizeUser, async (req, res) => {
     const { username, courseId } = req.params;
 
     console.log('Received :', username);
     console.log('Course ID:', courseId);
 
     db.getUserMarksForCourse(username, courseId).then((marks) => {
-        console.log('Marks:', marks);
         res.status(200).json({success: true, marks});
-
-        sendNotificationToUser("Rafael.Beckmann", "user Noten angefragt", username, "high", {})
-
     }).catch((error) => {
         console.error('Error getting marks:', error);
         res.status(500).json({success: false, message: 'Failed to get marks'});
     });
-})
+});
 
-router.get('/users/:username/courses', async (req, res) => {
+router.get('/users/:username/courses', authenticateToken, authorizeUser, async (req, res) => {
     const { username } = req.params;
 
     console.log('Received courses fetch request:', username);
 
     db.getUserCourseNames(username).then((courses) => {
-        // Rename course_id to courseId in each course object
         const formattedCourses = courses.map(course => ({
             courseId: course.course_id,
             name: course.name
         }));
-        console.log('Courses:', formattedCourses);
         res.status(200).json({success: true, courses: formattedCourses});
     }).catch((error) => {
         console.error('Error getting courses:', error);
         res.status(500).json({success: false, message: 'Failed to get courses'});
     });
-})
+});
 
-router.get('/users/:username/vpSelectedCourses', async (req, res) => {
+router.get('/users/:username/vpSelectedCourses', authenticateToken, authorizeUser, async (req, res) => {
     const { username } = req.params;
 
     console.log('Received courses fetch request:', username);
 
     db.getUserVpSelectedCourses(username).then((courses) => {
-        // Extract the single course name string instead of mapping to array of objects
         const courseName = courses.length > 0 ? courses[0].course_name : null;
-        console.log('Course:', courseName);
-        res.status(200).json({success: true, courseName});
+        console.log('Course:', courses);
+        res.status(200).json({success: true, courses});
     }).catch((error) => {
         console.error('Error getting courses:', error);
         res.status(500).json({success: false, message: 'Failed to get courses'});
     });
-})
+});
 
-router.post('/users/:username/vpSelectedCourses', async (req, res) => {
+router.post('/users/:username/vpSelectedCourses', authenticateToken, authorizeUser, async (req, res) => {
     const { username } = req.params;
     const { courseName } = req.body;
 
@@ -108,6 +131,9 @@ router.post('/users/:username/vpSelectedCourses', async (req, res) => {
         res.status(500).json({ success: false, message: 'Failed to insert course' });
     }
 });
+
+
+
 
 // dev
 router.get('/triggerUpdate', async (req, res) => {
@@ -125,7 +151,7 @@ router.get('/triggerUpdate', async (req, res) => {
 // dev
 router.get('/sendNotification' , (req, res) => {
 
-    sendNotificationToUser("Rafael.Beckmann", "test", "test", "high", {"mark": "1"})
+    sendNotificationToUser("Rafael.Beckmann", "test", "test", "high", {"grade": "1"})
         .then(() => {
             res.status(200).json({ success: true, message: 'Notification sent successfully' });
         })
@@ -135,6 +161,7 @@ router.get('/sendNotification' , (req, res) => {
         });
 });
 
+// dev
 router.get('/sendNotification2' , (req, res) => {
 
     sendNotificationToUser("Rafael.Beckmann", "ghrzjrth", "test", "high", {"open_vp": true})
@@ -146,7 +173,6 @@ router.get('/sendNotification2' , (req, res) => {
             res.status(500).json({ success: false, message: 'Failed to send notification' });
         });
 });
-
 
 // dev
 router.get('/vpUpdate', async (req, res) => {
@@ -162,6 +188,7 @@ router.get('/vpUpdate', async (req, res) => {
 })
 
 // dev
+// TODO: remove
 router.get('/vpSubstitutions/:courseName/:day', async (req, res) => {
     const { courseName, day } = req.params;
 
@@ -220,23 +247,7 @@ router.get('/vpSubstitutions/:courseName', async (req, res) => {
         console.error('Error sending notification:', error);
         res.status(500).json({success: false, message: 'Failed to trigger update'});
     }
-})
-// dev
-/* //ist noch alt, mit data, funktioniert so nicht
-router.post('/vpSubstitutions', async (req, res) => {
-    console.log('Received trigger update');
-    try {
-        const { courseName, data } = req.body;
-
-        console.log('Received trigger update, courseName:', courseName, 'data:', data);
-        await db.insertVpSubstitution(courseName, data);
-        res.status(200).json({success: true, message: "Inserted"});
-    } catch (error) {
-        console.error('Error sending notification:', error);
-        res.status(500).json({success: false, message: 'Failed to trigger update'});
-    }
-})
-*/
+});
 
 router.get('/vp', async (req, res) => {
     try {
@@ -256,7 +267,5 @@ router.get('/vp', async (req, res) => {
 router.get("/rick", (req, res) => {
     res.redirect("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
 });
-
-
 
 export default router;

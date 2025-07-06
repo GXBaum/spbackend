@@ -54,24 +54,30 @@ export async function vpCheckForDifferences(day) {
 
     }
 
-    console.log(usernames);
-    for (let i = 0; i < usernames.length; i++) {
-        const username = usernames[i];
+    console.log("notifying users:", usernames);
+    for (const username of usernames) {
+        const courseNames = await db.getUserVpSelectedCourses(username);
+        if (!courseNames || courseNames.length === 0) {
+            continue;
+        }
 
-        const userCourses = await db.getUserVpSelectedCourses(username);
-        const courseNames = userCourses.map(course => course.course_name);
-        const substitutions = await db.getVpSubstitutions(courseNames[0], stringDay, data.websiteDate);
+        for (const courseName of courseNames) {
+            const substitutions = await db.getVpSubstitutions(courseName, stringDay, data.websiteDate);
 
-        console.log("user courses", userCourses);
-        console.log("user substitutions", substitutions);
+            if (substitutions.length === 0) {
+                continue;
+            }
 
-        // TODO: gleiche vertretungen aus einer doppelstunde zusammenfassen. bsp: 1/2: Gl D → ----- (Auftrag)
-        const message = substitutions.map(substitution =>
-            `${substitution.hour}: ${substitution.original} → ${substitution.replacement} (${substitution.description})`
-        ).join('\n');
+            console.log(`user ${username} has substitutions for course ${courseName}:`, substitutions);
 
+            // TODO: gleiche vertretungen aus einer doppelstunde zusammenfassen. bsp: 1/2: Gl D → ----- (Auftrag)
+            const message = substitutions.map(substitution =>
+                `${substitution.hour}: ${substitution.original} → ${substitution.replacement} (${substitution.description})`
+            ).join('\n');
 
-        await sendNotificationToUser(username, `Vertretung für ${stringDay}`, message, "high", {"open_vp": true});
+            const title = `Vertretung für ${courseName} am ${stringDay === "today" ? "heutigen" : "nächsten"} Schultag`;
+            await sendNotificationToUser(username, title, message, "high", {"open_vp": true});
+        }
     }
 
 }
