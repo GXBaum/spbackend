@@ -1,6 +1,7 @@
 import {DB_PATH, TABLE_NAMES} from "../config/constants.js";
 import {execute} from "./sql.js";
 import sqlite from "sqlite3";
+import Fuse from 'fuse.js';
 
 // TODO: diese ineffiziente scheiße fixen, es macht immer neue db connections
 
@@ -264,8 +265,21 @@ const insertUserVpSelectedCourses = async (spUsername, courseName) => {
     try {
         await execute(
             db,
-            `INSERT OR REPLACE INTO ${TABLE_NAMES.USER_VP_SELECTED_COURSES} (sp_username, course_name)
+            `INSERT OR REPLACE INTO ${TABLE_NAMES.USER_VP_SELECTED_COURSE} (sp_username, course_name)
              VALUES (?, ?)`,
+            [spUsername, courseName]
+        );
+    } finally {
+        db.close();
+    }
+};
+
+const deleteUserVpSelectedCourse = async (spUsername, courseName) => {
+    const db = getDb();
+    try {
+        await execute(
+            db,
+            `DELETE FROM ${TABLE_NAMES.USER_VP_SELECTED_COURSE} WHERE sp_username = ? AND course_name = ?`,
             [spUsername, courseName]
         );
     } finally {
@@ -277,7 +291,7 @@ const getUserVpSelectedCourses = async (spUsername) => {
     const db = getDb();
     try {
         return new Promise((resolve, reject) => {
-            db.all(`SELECT course_name FROM ${TABLE_NAMES.USER_VP_SELECTED_COURSES} WHERE sp_username = ?`,
+            db.all(`SELECT course_name FROM ${TABLE_NAMES.USER_VP_SELECTED_COURSE} WHERE sp_username = ?`,
                 [spUsername],
                 (err, rows) => {
                 if (err) {
@@ -356,6 +370,31 @@ const getVpSubstitutions = async (courseName, day, websiteDate) => {
         db.close();
     }
 }
+
+const getVpSubstitutionsForCourses = async (courseNames, day, websiteDate) => {
+    const db = getDb();
+    try {
+        return new Promise((resolve, reject) => {
+            const placeholders = courseNames.map(() => '?').join(',');
+            const sql = `
+                SELECT course_name, hour, original, replacement, description, vp_date 
+                FROM ${TABLE_NAMES.VP_SUBSTITUTION} 
+                WHERE course_name IN (${placeholders}) AND day = ? AND vp_date = ? 
+                ORDER BY course_name, CAST(hour AS INTEGER)`;
+
+            db.all(sql, [...courseNames, day, websiteDate], (err, rows) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(rows);
+                }
+            });
+        });
+    } finally {
+        db.close();
+    }
+};
+
 const deleteVpSubstitutionsForDay = async (day) => {
     const db = getDb();
     try {
@@ -387,7 +426,7 @@ const getUsersWithVPCourseName = async (courseName) => {
     try {
         return new Promise((resolve, reject) => {
             db.all(
-                `SELECT sp_username FROM ${TABLE_NAMES.USER_VP_SELECTED_COURSES} WHERE course_name = ?`,
+                `SELECT * FROM ${TABLE_NAMES.USER_VP_SELECTED_COURSE} WHERE course_name = ?`,
                 [courseName],
                  (err, rows) => {
                     if (err) {
@@ -469,6 +508,69 @@ const deleteRefreshToken = async (token) => {
     }
 };
 
+const fuzzyCourseSearch = async (searchTerm) => {
+    const db = getDb();
+    try {
+        const courses = await new Promise((resolve, reject) => {
+            const query = `SELECT * FROM ${TABLE_NAMES.COURSE}`;
+            db.all(query, [], (err, rows) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(rows);
+                }
+            });
+        });
+
+        // Normalize course names for better matching
+        const processedCourses = courses.map(course => ({
+            ...course,
+            normalizedName: course.name.replace(/[\s./-]/g, '').toLowerCase()
+        }));
+
+        const fuseOptions = {
+            keys: ['normalizedName'],
+            includeScore: true,
+            threshold: 0.4, // Adjust threshold for more or less strict matching
+        };
+
+        const fuse = new Fuse(processedCourses, fuseOptions);
+        const normalizedSearchTerm = searchTerm.replace(/[\s./-]/g, '').toLowerCase();
+
+        return fuse.search(normalizedSearchTerm).map(result => result.item);
+
+    } finally {
+        db.close();
+    }
+};
+
+const courseSearch = async (searchTerm) => {
+    const db = getDb();
+    // Normalize the search term by removing special characters and converting to lowercase.
+    const processedSearchTerm = searchTerm.replace(/[\/\s-]/g, '').toLowerCase();
+    try {
+        return new Promise((resolve, reject) => {
+            // In the query, normalize the 'name' column by removing separators ('/', ' ', '-')
+            // and converting to lowercase before performing a LIKE comparison.
+            const query = `
+                SELECT * FROM ${TABLE_NAMES.COURSE}
+                WHERE REPLACE(REPLACE(REPLACE(LOWER(name), '/', ''), ' ', ''), '-', '') LIKE ?`;
+            const params = [`%${processedSearchTerm}%`];
+
+            db.all(query, params, (err, rows) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(rows);
+                }
+            });
+        });
+    } finally {
+        db.close();
+    }
+};
+
+
 
 
 
@@ -502,5 +604,9 @@ export default {
     getUserByUsername,
     storeRefreshToken,
     getRefreshToken,
-    deleteRefreshToken
+    deleteRefreshToken,
+    deleteUserVpSelectedCourse,
+    getVpSubstitutionsForCourses,
+    fuzzyCourseSearch,
+    courseSearch,
 };

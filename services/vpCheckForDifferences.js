@@ -1,6 +1,8 @@
 import {scrapeVpData} from "./scrapeVp.js";
 import db from "../db/insert.js"
 import {sendNotificationToUser} from "./notifications.js";
+import {buildDeeplink} from "../utils/deepLinkBuilder.js";
+import {CHANNEL_NAMES} from "../config/constants.js";
 
 
 export async function vpCheckForDifferences(day) {
@@ -56,6 +58,7 @@ export async function vpCheckForDifferences(day) {
 
     console.log("notifying users:", usernames);
     for (const username of usernames) {
+        // TODO: bedeutet das nicht, dass man für alle kurse nochmal benachrichtigt wird, auch wenn nur ein Kurs Änderungen hat?
         const courseNames = await db.getUserVpSelectedCourses(username);
         if (!courseNames || courseNames.length === 0) {
             continue;
@@ -72,11 +75,13 @@ export async function vpCheckForDifferences(day) {
 
             // TODO: gleiche vertretungen aus einer doppelstunde zusammenfassen. bsp: 1/2: Gl D → ----- (Auftrag)
             const message = substitutions.map(substitution =>
-                `${substitution.hour}: ${substitution.original} → ${substitution.replacement} (${substitution.description})`
+                `${substitution.hour}: ${substitution.original} → ${substitution.replacement}${substitution.description ? ` (${substitution.description})` : ""}`
             ).join('\n');
 
             const title = `Vertretung für ${courseName} am ${stringDay === "today" ? "heutigen" : "nächsten"} Schultag`;
-            await sendNotificationToUser(username, title, message, "high", {"open_vp": true});
+            // TODO
+            const uri = buildDeeplink("vpScreen", {"course": courseName})
+            await sendNotificationToUser(username, title, message, {"deepLink": uri, "channel_id": CHANNEL_NAMES.CHANNEL_VP_UPDATES});
         }
     }
 

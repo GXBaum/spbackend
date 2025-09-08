@@ -99,11 +99,11 @@ export const createTables = async () => {
         // Create user_vp_selected_courses table
         await execute(
             db,
-            `CREATE TABLE IF NOT EXISTS ${TABLE_NAMES.USER_VP_SELECTED_COURSES}
+            `CREATE TABLE IF NOT EXISTS ${TABLE_NAMES.USER_VP_SELECTED_COURSE}
              (
                  sp_username TEXT NOT NULL,
                  course_name TEXT NOT NULL,
-                 PRIMARY KEY (sp_username),
+                 PRIMARY KEY (sp_username, course_name),
                  FOREIGN KEY (sp_username) REFERENCES ${TABLE_NAMES.USER}(sp_username) ON DELETE CASCADE
              )`
         );

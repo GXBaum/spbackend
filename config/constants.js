@@ -11,8 +11,14 @@ export const TABLE_NAMES = {
     COURSE_TEACHER: "course_teacher",
     USER_NOTIFICATION_TOKEN: "user_notification_token",
     //USER_NOTIFICATION_PREFS: "user_notification_prefs"
-    USER_VP_SELECTED_COURSES: "user_vp_selected_courses",
+    USER_VP_SELECTED_COURSE: "user_vp_selected_course",
     VP_DIFFERENCES: "vp_differences",
     VP_SUBSTITUTION: "vp_substitution",
     REFRESH_TOKEN: "refresh_token"
 };
+
+export const CHANNEL_NAMES = {
+    CHANNEL_GRADES: "grade_notifications",
+    CHANNEL_VP_UPDATES: "vp_updates",
+    CHANNEL_OTHER: "other_notifications",
+}

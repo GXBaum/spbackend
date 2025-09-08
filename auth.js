@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import db from './db/insert.js';
-import { randomBytes } from 'crypto';
+import {randomBytes} from 'crypto';
 
 
 export const login = async (req, res) => {

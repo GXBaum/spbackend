@@ -1,13 +1,14 @@
 import {getLoginCookies} from "./auth.js";
-import {getCourses} from "./courses.js";
 import {getMarks} from "./marks.js";
 import {sendNotificationToUser} from "./notifications.js";
 import {getTeachers} from "./teachers.js";
 import fetch from "node-fetch";
-import {USER_AGENT} from "../config/constants.js";
+import {CHANNEL_NAMES, USER_AGENT} from "../config/constants.js";
 import * as cheerio from "cheerio";
 import db from "../db/insert.js";
 import {spGetMessages} from "./messagesOldReinkopiert.js";
+import {buildDeeplink} from "../utils/deepLinkBuilder.js";
+
 export async function updateAllSpUserData(SpUsername, SpPassword, schoolId= 6078) {
     try {
         console.time('Script');
@@ -110,11 +111,19 @@ export async function updateAllSpUserData(SpUsername, SpPassword, schoolId= 6078
                     message += `\n- ${mark.name}: ${mark.grade}`;
                 });
 
+                /*await sendNotificationToUser(
+                    SpUsername,
+                    `Neue ${newMarks.length === 1 ? 'Note' : 'Noten'} eingetragen`,
+                    message,
+                    { "grade": newMarks[0].grade.toString() }
+                );*/
+                // TODO: soll die Note ein query argument sein?
+                const uri = buildDeeplink(`revealmark/${newMarks[0].grade.toString()}`)
                 await sendNotificationToUser(
                     SpUsername,
                     `Neue ${newMarks.length === 1 ? 'Note' : 'Noten'} eingetragen`,
                     message,
-                    "high", { "grade": newMarks[0].grade.toString() }
+                    { "deepLink": uri, "channel_id": CHANNEL_NAMES.CHANNEL_GRADES}
                 );
             }
 
