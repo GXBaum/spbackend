@@ -38,7 +38,7 @@ export async function spGetMessages(cookies, /*localStorage*/) {
     const html = await response.text();
     const $ = cheerio.load(html);
 
-    console.log(html)
+    //console.log(html)
 
 
     /*

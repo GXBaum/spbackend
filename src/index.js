@@ -4,7 +4,6 @@ import {CHANNEL_NAMES, EXPRESS_PORT} from './config/constants.js';
 import {scheduleUpdates} from './services/scheduleUpdates.js';
 
 import apiDevRoutes from './routes/api.dev.js';
-import {createTables} from "./db/createTables.js";
 
 import 'dotenv/config';
 
@@ -21,7 +20,6 @@ async function startServer() {
 
   try {
     // Initialize the database
-    await createTables();
 
 
     // Start the Express server
@@ -30,7 +28,7 @@ async function startServer() {
 
       // Send test notification only if explicitly enabled
       if (process.env.SEND_STARTUP_NOTIFICATION === 'true') {
-        const testUserId = 'Rafael.Beckmann';
+        const testUserId = 1;
         const testTitle = 'Server started';
         const testMessage = new Date().toISOString();
         sendNotificationToUser(testUserId, testTitle, testMessage, {"channel_id": CHANNEL_NAMES.CHANNEL_OTHER})
@@ -64,6 +62,16 @@ async function startServer() {
   // Graceful shutdown on SIGTERM
   process.on('SIGTERM', async () => {
     console.log('SIGTERM received, shutting down...');
+
+    if (process.env.SEND_STARTUP_NOTIFICATION === 'true') {
+      const testUserId = 1;
+      const testTitle = 'Server shutting down';
+      const testMessage = new Date().toISOString();
+      sendNotificationToUser(testUserId, testTitle, testMessage, {"channel_id": CHANNEL_NAMES.CHANNEL_OTHER})
+          .then(() => console.log('Test notification sent'))
+          .catch((err) => console.error('Test notification error:', err));
+    }
+
     if (server) {
       server.close(() => {
         console.log('Server closed');

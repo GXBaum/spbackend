@@ -1,9 +1,14 @@
 import jwt from 'jsonwebtoken';
-import db from './db/insert.js';
 import {randomBytes} from 'crypto';
+import {createDefaultAuthRepository} from "./db/repositories/authRepository.js";
 
-
-export const login = async (req, res) => {
+export const login = async (
+    req,
+    res,
+    {
+        authRepo = createDefaultAuthRepository()
+    } = {}
+) => {
     console.log("Received login request:", req.body);
     const { username, password } = req.body;
 
@@ -13,48 +18,58 @@ export const login = async (req, res) => {
 
     try {
         // TODO: encrypt passwords in db
-        const user = await db.getUserByUsername(username);
+        const user = authRepo.getUserByUsername(username);
 
         if (!user || user.sp_password !== password) {
             return res.status(401).json({ success: false, message: 'Invalid credentials' });
         }
 
         // User is authenticated, create tokens
-        const accessToken = jwt.sign({ username: user.sp_username }, process.env.JWT_SECRET, { expiresIn: '5m' });
+        const accessToken = jwt.sign(
+            { username: user.sp_username, uid: user.id },
+            process.env.JWT_SECRET,
+            { expiresIn: '5m' }
+        );
+
         const refreshToken = randomBytes(64).toString('hex');
 
         // Store refresh token in DB
         const expiryDate = new Date();
         expiryDate.setDate(expiryDate.getDate() + 90); // 90-day expiry
-        await db.storeRefreshToken(refreshToken, user.sp_username, expiryDate.toISOString());
+        authRepo.storeRefreshToken(user.id, refreshToken, expiryDate.toISOString());
 
-        res.json({ success: true, accessToken, refreshToken });
+        res.json({ success: true, accessToken, refreshToken, userId: user.id });
     } catch (error) {
         console.error('Login error:', error);
         res.status(500).json({ success: false, message: 'Internal server error' });
     }
 };
 
-export const refreshToken = async (req, res) => {
+export const refreshToken = async (req, res, { authRepo = createDefaultAuthRepository() } = {}) => {
     const { token } = req.body;
     if (!token) return res.sendStatus(401);
 
     try {
-        const storedToken = await db.getRefreshToken(token);
-
+        const storedToken = authRepo.getRefreshToken(token);
         if (!storedToken) return res.sendStatus(403);
 
-        // TODO: token ablauf check wieder hinzufügen, momentan kann es aber nicht getauscht werden
-        /*if (new Date(storedToken.expires_at) < new Date()) {
-            await db.deleteRefreshToken(token);
-            return res.status(403).json({ message: "Refresh token expired" });
+        // Optional expiry enforcement
+        /*
+        if (new Date(storedToken.expires_at) < new Date()) {
+            authRepo.deleteRefreshToken(token);
+            return res.status(403).json({ success: false, message: 'Refresh token expired' });
         }
         */
 
-        const accessToken = jwt.sign({ username: storedToken.sp_username }, process.env.JWT_SECRET, { expiresIn: '5m' });
-        res.json({ success: true, accessToken });
+        const accessToken = jwt.sign(
+            { username: storedToken.sp_username, uid: storedToken.user_id },
+            process.env.JWT_SECRET,
+            { expiresIn: '5m' }
+        );
 
+        res.json({ success: true, accessToken });
     } catch (error) {
+        console.error('Refresh token error:', error);
         res.status(500).json({ success: false, message: 'Internal server error' });
     }
 };
@@ -79,9 +94,9 @@ export const authenticateToken = (req, res, next) => {
 };
 
 export const authorizeUser = (req, res, next) => {
-    if (req.user.username !== req.params.username) {
-        console.log(`Authorization error: User ${req.user.username} is not authorized for resource owned by ${req.params.username}.`);
+    if (Number(req.user.uid) !== Number(req.params.userId)) {
+        console.log(`Authorization error: User ${req.user.uid} is not authorized for resource owned by ${req.params.userId}.`);
         return res.status(403).json({ success: false, message: 'Forbidden' });
     }
     next();
-}
+};

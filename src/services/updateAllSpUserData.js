@@ -5,19 +5,39 @@ import {getTeachers} from "./teachers.js";
 import fetch from "node-fetch";
 import {CHANNEL_NAMES, USER_AGENT} from "../config/constants.js";
 import * as cheerio from "cheerio";
-import db from "../db/insert.js";
 import {spGetMessages} from "./messagesOldReinkopiert.js";
 import {buildDeeplink} from "../utils/deepLinkBuilder.js";
+import {createDefaultUserRepository} from "../db/repositories/userRepository.js";
+import {createDefaultCourseRepository} from "../db/repositories/courseRepository.js";
+import {createDefaultMarkRepository} from "../db/repositories/marksRepository.js";
+import {createDefaultTeacherRepository} from "../db/repositories/teacherRepository.js";
 
-export async function updateAllSpUserData(SpUsername, SpPassword, schoolId= 6078) {
+export async function updateAllSpUserData(
+    userId, schoolId = 6078,
+    {
+        userRepo = createDefaultUserRepository(),
+        courseRepo = createDefaultCourseRepository(),
+        marksRepo = createDefaultMarkRepository(),
+        teacherRepo = createDefaultTeacherRepository()
+    } = {}
+) {
     try {
         console.time('Script');
 
+        const user = userRepo.getUserMerged(userId);
+        console.log(user);
+        if (!user) {
+            console.error(`User not found for ID: ${userId}`);
+            return;
+        }
+        const spUsername = user.sp_username;
+        console.log(spUsername);
+        const spPassword = user.sp_password;
+        console.log(spPassword);
 
         console.time('Login');
-        const loginCookies = await getLoginCookies(SpUsername, SpPassword, schoolId);
+        const loginCookies = await getLoginCookies(spUsername, spPassword, schoolId);
         console.timeEnd('Login');
-
 
         const URL = "https://start.schulportal.hessen.de/meinunterricht.php";
         const response = await fetch(URL, {
@@ -31,27 +51,24 @@ export async function updateAllSpUserData(SpUsername, SpPassword, schoolId= 6078
         });
         if (response.status !== 200) {
             console.error("Failed to fetch page:", response.status, response.statusText);
-            //throw new Error(`Failed to fetch courses page: ${response.status} ${response.statusText}`);
+            return;
         }
 
         const html = await response.text();
         const $ = cheerio.load(html);
 
-
         const courses = getCourses2($);
 
-        //console.log(courses);
         for (const course of courses) {
-            await db.insertCourse(course.id, course.name)
+            courseRepo.insertCourse(course.id, course.name);
         }
         for (const course of courses) {
-            await db.insertUserCourse(SpUsername, course.id);
+            courseRepo.addUserCourse(userId, course.id);
         }
 
         for (const halfYearToProcess of [1, 2]) {
-            //await db.connect();
-            console.log("user:", SpUsername);
-            const existingMarks = await db.getUserMarks(SpUsername);
+            console.log("user:", userId + " / " + spUsername);
+            const existingMarks = marksRepo.getUserMarks(userId)
             console.log("Existing marks:", existingMarks.length);
             const existingMarksForHalfYear = existingMarks.filter(mark => mark.half_year === halfYearToProcess);
 
@@ -74,7 +91,8 @@ export async function updateAllSpUserData(SpUsername, SpPassword, schoolId= 6078
                         grade: mark.grade,
                         courseId: course.id,
                         halfYear: halfYearToProcess,
-                        SpUsername: SpUsername,
+                        SpUsername: spUsername, // TODO: remove
+                        userId: userId
                     });
                 });
             }
@@ -98,8 +116,7 @@ export async function updateAllSpUserData(SpUsername, SpPassword, schoolId= 6078
             }
 
 
-            //TODO: hat 2 einmal wieder falsch benachrichtigt
-                
+
             // Send notifications for new marks
             for (const courseId in newMarksByCourse) {
                 const courseName = courses.find(c => c.id.toString() === courseId.toString())?.name || "Unbekannter Kurs";
@@ -111,16 +128,10 @@ export async function updateAllSpUserData(SpUsername, SpPassword, schoolId= 6078
                     message += `\n- ${mark.name}: ${mark.grade}`;
                 });
 
-                /*await sendNotificationToUser(
-                    SpUsername,
-                    `Neue ${newMarks.length === 1 ? 'Note' : 'Noten'} eingetragen`,
-                    message,
-                    { "grade": newMarks[0].grade.toString() }
-                );*/
                 // TODO: soll die Note ein query argument sein?
                 const uri = buildDeeplink(`revealmark/${newMarks[0].grade.toString()}`)
                 await sendNotificationToUser(
-                    SpUsername,
+                    userId,
                     `Neue ${newMarks.length === 1 ? 'Note' : 'Noten'} eingetragen`,
                     message,
                     { "deepLink": uri, "channel_id": CHANNEL_NAMES.CHANNEL_GRADES}
@@ -130,14 +141,14 @@ export async function updateAllSpUserData(SpUsername, SpPassword, schoolId= 6078
 
             //await db.connect();
             // Now delete and insert all marks
-            await db.deleteMarksOfHalfYear(SpUsername, halfYearToProcess);
+            // TODO: i mean what the fuck
+            marksRepo.deleteMarksOfHalfYear(userId, halfYearToProcess);
 
             // Insert all new marks
             for (const mark of newMarksForHalfYear) {
                 console.log("Inserting mark:", JSON.stringify(mark));
-                const res = await db.insertMark(mark)
+                const res = marksRepo.insertMark(mark)
                 //console.log("Inserted mark:", res);
-
             }
         }
 
@@ -150,11 +161,11 @@ export async function updateAllSpUserData(SpUsername, SpPassword, schoolId= 6078
         console.log("Course-Teacher relationships found:", coursesTeachers.length);
 
         for (const teacher of teachers) {
-            await db.insertTeacher(teacher);
+            teacherRepo.insertTeacher(teacher);
         }
         for (const relation of coursesTeachers) {
             console.log(relation);
-            await db.insertCourseTeacher(relation.courseId, relation.teacherId);
+            teacherRepo.linkCourseTeacher(relation.courseId, relation.teacherId);
         }
         console.timeEnd("getTeachers");
 
@@ -311,11 +322,9 @@ export async function updateAllSpUserData(SpUsername, SpPassword, schoolId= 6078
 
     } catch (error) {
         console.error("Error:", error);
-        console.timeEnd('Script'); // Ensure it still ends even on error
-    } finally {
+        console.timeEnd('Script');
     }
 }
-
 
 function getCourses2($) {
     const courses = [];
