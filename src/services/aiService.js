@@ -1,7 +1,7 @@
 import OpenAI from 'openai';
 
 
-export async function aiTest(systemPrompt, prompt) {
+export async function aiService(systemPrompt, prompt) {
 
     const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
     //console.log('OPENROUTER_API_KEY', OPENROUTER_API_KEY);

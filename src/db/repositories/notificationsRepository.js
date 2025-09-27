@@ -6,9 +6,20 @@ export function createNotificationsRepository(db) {
 
 
     const stmts = {
-        selectTokensByUser: db.prepare(`SELECT token FROM user_notification_token WHERE user_id = ?`),
-        insertToken: db.prepare(`INSERT OR IGNORE INTO user_notification_token (user_id, token) VALUES (?, ?)`),
-        deleteToken: db.prepare(`DELETE FROM user_notification_token WHERE token = ?`),
+        selectTokensByUser: db.prepare(`
+            SELECT token
+            FROM user_notification_token
+            WHERE user_id = ?
+        `),
+        insertToken: db.prepare(`
+            INSERT OR IGNORE INTO user_notification_token (user_id, token)
+            VALUES (?, ?)
+        `),
+        deleteToken: db.prepare(`
+            DELETE
+            FROM user_notification_token
+            WHERE token = ?
+        `),
     };
 
     return {

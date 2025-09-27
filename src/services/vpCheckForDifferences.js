@@ -2,7 +2,7 @@ import {scrapeVpData} from "./scrapeVp.js";
 import {sendNotificationToUser} from "./notifications.js";
 import {buildDeeplink} from "../utils/deepLinkBuilder.js";
 import {CHANNEL_NAMES} from "../config/constants.js";
-import {aiTest} from "../aiTest.js";
+import {aiService} from "./aiService.js";
 import {createDefaultUserRepository} from "../db/repositories/userRepository.js";
 import {createDefaultVpRepository} from "../db/repositories/vpRepository.js";
 
@@ -57,7 +57,7 @@ export async function vpCheckForDifferences(
     const prompt = `Vertretungsplan:\n${data.rawPage}\n\nAlte Zusammenfassung: ${oldSummary}`
 
 
-    aiTest(systemPrompt, prompt)
+    aiService(systemPrompt, prompt)
         .then((completion) => {
             console.log("completion: " + JSON.stringify(completion));
             const rawContent = completion.choices?.[0]?.message?.content
@@ -83,7 +83,6 @@ export async function vpCheckForDifferences(
         });
 
 
-
     const changedCourses = await processSubstitutions(data, stringDay, vpRepo);
     console.log("changedCourses ", changedCourses);
     await notifyUsers(changedCourses, stringDay, data.websiteDate, vpRepo, notifier, deepLinkBuilder, channelNames);
@@ -100,8 +99,70 @@ export function isNewSubstitution(oldData, substitution, websiteDate) {
     );
 }
 
+export function isDeletedSubstitution(newData, oldSubstitution, websiteDate) {
+    // newData is the array from scraper (doesn't have vp_date); oldSubstitution is a DB row (has vp_date)
+    // We treat a DB row as deleted if there is no exact match in newData (exact fields compared).
+    if (!Array.isArray(newData) || newData.length === 0) return true;
+
+    return !newData.some(n =>
+            n.hour === oldSubstitution.hour &&
+            n.original === oldSubstitution.original &&
+            n.replacement === oldSubstitution.replacement &&
+            n.description === oldSubstitution.description
+        // we do NOT compare vp_date against n because newData items come without vp_date;
+        // scope is controlled when fetching oldSubstitutions via listAllSubstitutionsForDay(day, websiteDate)
+    );
+}
+
 export async function processSubstitutions(data, stringDay, vpRepo) {
-    //const usersList = [];
+    const siteDate = data.websiteDate;
+    const oldSubstitutions = vpRepo.listAllSubstitutionsForDay(stringDay, siteDate) || [];
+    const substitutions = Array.isArray(data.substitutions) ? data.substitutions : [];
+
+    const coursesWithUpdates = new Set();
+
+    // TODO: add transactions
+    for (const oldSubstitution of oldSubstitutions) {
+        if (isDeletedSubstitution(substitutions, oldSubstitution, siteDate)) {
+            console.log("DELETING:", JSON.stringify(oldSubstitution));
+            const deleted = vpRepo.markSubstitutionAsDeleted({
+                course: oldSubstitution.course,
+                day: stringDay,
+                hour: oldSubstitution.hour ?? null,
+                original: oldSubstitution.original ?? null,
+                replacement: oldSubstitution.replacement ?? null,
+                description: oldSubstitution.description ?? null,
+                vp_date: oldSubstitution.vp_date
+            });
+            console.log("markSubstitutionAsDeleted returned:", deleted);
+            if (deleted && oldSubstitution.course) coursesWithUpdates.add(oldSubstitution.course);
+        }
+    }
+
+    // TODO: add transactions
+    // insert new rows that didn't exist before
+    for (const substitution of substitutions) {
+        //console.log(`substitution: ${substitution.hour}, ${substitution.course}`);
+
+        if (!isNewSubstitution(oldSubstitutions, substitution, siteDate)) {
+            continue;
+        }
+
+        vpRepo.insertSubstitution({
+            course: substitution.course,
+            day: stringDay,
+            hour: substitution.hour ?? null,
+            original: substitution.original ?? null,
+            replacement: substitution.replacement ?? null,
+            description: substitution.description ?? null,
+            vp_date: siteDate
+        });
+        if (substitution.course) coursesWithUpdates.add(substitution.course);
+    }
+    console.log("changed substitutions: " + Array.from(coursesWithUpdates));
+    return Array.from(coursesWithUpdates);
+}
+export async function processSubstitutionsOld(data, stringDay, vpRepo) {
     let coursesWithUpdates = [];
 
     for (const substitution of data.substitutions) {
@@ -135,23 +196,24 @@ export async function processSubstitutions(data, stringDay, vpRepo) {
     return coursesWithUpdates;
 }
 
+
 export function formatSubstitutionsMessage(substitutions) {
     return substitutions.map(substitution =>
         `${substitution.hour}: ${substitution.original || "—"} → ${substitution.replacement || "—"}${substitution.description ? ` (${substitution.description})` : ""}`
     ).join('\n');
 }
+
 // TODO: implement something like this but this doesnt work
 export function formatSubstitutionsMessageCombine(substitutions) {
     let oldSub = "";
     let texts = [];
     substitutions.forEach((sub, index) => {
         if (
-            oldSub.hour === sub.hour -1 &&
+            oldSub.hour === sub.hour - 1 &&
             oldSub.original === sub.original &&
             oldSub.replacement === sub.replacement &&
-            oldSub.description === sub.description)
-        {
-            texts[index -1] = `${sub.hour-1}/${sub.hour}: ${sub.original || "—"} → ${sub.replacement || "—"}${sub.description ? ` (${sub.description})` : ""}`
+            oldSub.description === sub.description) {
+            texts[index - 1] = `${sub.hour - 1}/${sub.hour}: ${sub.original || "—"} → ${sub.replacement || "—"}${sub.description ? ` (${sub.description})` : ""}`
         } else {
             texts.push(
                 `${sub.hour}: ${sub.original || "—"} → ${sub.replacement || "—"}${sub.description ? ` (${sub.description})` : ""}`
@@ -172,7 +234,7 @@ export async function notifyUsers(
     channelNames
 ) {
     for (const course of changedCourses) {
-        const users = vpRepo.getUsersWithSelectedCourses(course);
+        const users = vpRepo.getUsersWithVPCourseName(course);
         console.log(users);
         console.log(`users: ${JSON.stringify(users)}`);
 
@@ -183,7 +245,7 @@ export async function notifyUsers(
         const title = `${course}: Vertretung am ${stringDay === "today" ? "heutigen" : "nächsten"} Schultag`;
         const uri = deepLinkBuilder("vpScreen", {"course": course});
 
-        for (const { user_id } of users) {
+        for (const {user_id} of users) {
             await notifier(user_id, title, message, {
                 deepLink: uri,
                 channel_id: channelNames.CHANNEL_VP_UPDATES

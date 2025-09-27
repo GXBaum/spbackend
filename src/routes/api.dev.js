@@ -8,7 +8,7 @@ import {vpCheckForDifferences} from "../services/vpCheckForDifferences.js";
 import {authenticateToken, authorizeUser, login, refreshToken} from '../auth.js';
 import {buildDeeplink} from "../utils/deepLinkBuilder.js";
 import {CHANNEL_NAMES} from "../config/constants.js";
-import {aiTest} from "../aiTest.js";
+import {aiService} from "../services/aiService.js";
 import {createDefaultVpRepository} from "../db/repositories/vpRepository.js";
 import {createDefaultUserRepository} from "../db/repositories/userRepository.js";
 import {createDefaultAuthRepository} from "../db/repositories/authRepository.js";
@@ -53,7 +53,7 @@ router.use((req, res, next) => {
 router.post('/users', async (req, res) => {
     const { isNotificationEnabled  } = req.body;
 
-    console.log('Received user creation request:', username);
+    console.log('Received user creation request');
 
     if (isNotificationEnabled === undefined) {
         return res.status(400).json({ success: false, message: 'isNotificationEnabled are required' });
@@ -72,8 +72,7 @@ router.post('/users', async (req, res) => {
 router.post('/auth/login', login);
 router.post('/auth/token', refreshToken);
 
-// TODO: add auth
-router.put('/users/:userId/notification-token', /*authenticateToken, authorizeUser,*/ async (req, res) => {
+router.put('/users/:userId/notification-token', authenticateToken, authorizeUser, async (req, res) => {
     const { userId } = req.params;
     const { token } = req.body;
 
@@ -97,7 +96,7 @@ router.get('/users/:userId/marks', authenticateToken, authorizeUser, (req, res) 
     try {
         const marks = markRepo.getUserMarks(userId)
         res.status(200).json({ success: true, marks });
-        sendNotificationToUser(1, "user Noten angefragt", username, { "channel_id": CHANNEL_NAMES.CHANNEL_OTHER }).catch(()=>{});
+        sendNotificationToUser(1, "user Noten angefragt", userId, { "channel_id": CHANNEL_NAMES.CHANNEL_OTHER }).catch(()=>{});
     } catch (error) {
         console.error('Error getting marks:', error);
         res.status(500).json({ success: false, message: 'Failed to get marks' });
@@ -261,7 +260,7 @@ router.get('/ai', async (req, res) => {
 
     let response;
     try {
-        response = await aiTest(systemPrompt, prompt)
+        response = await aiService(systemPrompt, prompt)
     } catch (error) {
         console.error('Error sending AI test prompt:', error);
         res.status(500).json({ success: false, message: `Failed to send AI test: ${error}`});
@@ -317,7 +316,9 @@ router.get('/vpSubstitutions/:courseName', async (req, res) => {
         for (let dayInt = 1; dayInt <= 2; dayInt++) {
             const vpDate = await scrapeVpData(`https://www.kleist-schule.de/vertretungsplan/schueler/aktuelle%20plaene/${dayInt}/vp.html`);
             const day = dayInt === 1 ? "today" : "tomorrow";
-            const data = vpRepo.listSubstitutions(courseName, day, vpDate.websiteDate);
+            //const data = vpRepo.listSubstitutions(courseName, day, vpDate.websiteDate);
+            const data = vpRepo.listAllSubstitutions(courseName, day, vpDate.websiteDate);
+
             vals.push(data);
         }
         res.status(200).json({ success: true, substitutions: vals });
@@ -344,7 +345,13 @@ router.get('/vpSubstitutions', async (req, res) => {
         for (let dayInt = 1; dayInt <= 2; dayInt++) {
             const vpDate = await scrapeVpData(`https://www.kleist-schule.de/vertretungsplan/schueler/aktuelle%20plaene/${dayInt}/vp.html`);
             const day = dayInt === 1 ? "today" : "tomorrow";
-            const substitutions = vpRepo.listSubstitutionsForCourses(courseNames, day, vpDate.websiteDate)
+            const substitutions = vpRepo.listAllSubstitutionsForCourses(courseNames, day, vpDate.websiteDate)
+                // quick fix for json scheme
+                .map(sub => ({
+                    ...sub,
+                    isDeleted: sub.is_deleted,
+                    is_deleted: undefined
+                }));
             substitutions.forEach(sub => {
                 if (allSubstitutions[sub.course]) {
                     allSubstitutions[sub.course][day].push(sub);

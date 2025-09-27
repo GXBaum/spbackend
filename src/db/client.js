@@ -80,7 +80,7 @@ CREATE TABLE IF NOT EXISTS vp_substitution (
   replacement TEXT,
   description TEXT,
   vp_date TEXT NOT NULL,
-  deleted INTEGER NOT NULL DEFAULT 0,
+  is_deleted INTEGER NOT NULL DEFAULT 0,
   UNIQUE (course, day, hour, original, replacement, description, vp_date)
 );
 
