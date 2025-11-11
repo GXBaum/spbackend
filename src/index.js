@@ -2,6 +2,7 @@ import {sendNotificationToUser} from './services/notifications.js';
 import express from 'express';
 import {CHANNEL_NAMES, EXPRESS_PORT} from './config/constants.js';
 import {scheduleUpdates} from './services/scheduleUpdates.js';
+import {requestLogger} from "./middleware/request-logger.js";
 
 import apiDevRoutes from './routes/api.dev.js';
 
@@ -10,6 +11,7 @@ import 'dotenv/config';
 const app = express();
 app.set('trust proxy', true);
 app.use(express.json());
+app.use(requestLogger);
 app.use('/api/dev', apiDevRoutes);
 
 /**
@@ -19,21 +21,15 @@ async function startServer() {
   let server; // Declare server variable in outer scope for cleanup
 
   try {
-    // Initialize the database
-
-
     // Start the Express server
     server = app.listen(EXPRESS_PORT, () => {
       console.log(`Server running on port ${EXPRESS_PORT}`);
 
-      // Send test notification only if explicitly enabled
       if (process.env.SEND_STARTUP_NOTIFICATION === 'true') {
-        const testUserId = 1;
-        const testTitle = 'Server started';
         const testMessage = new Date().toISOString();
-        sendNotificationToUser(testUserId, testTitle, testMessage, {"channel_id": CHANNEL_NAMES.CHANNEL_OTHER})
-          .then(() => console.log('Test notification sent'))
-          .catch((err) => console.error('Test notification error:', err));
+        sendNotificationToUser(1, "Server Started", testMessage, {"channel_id": CHANNEL_NAMES.CHANNEL_OTHER})
+          .then(() => console.log("Test notification sent"))
+          .catch((err) => console.error("Test notification error:", err));
       }
 
       // Schedule periodic updates with error handling
@@ -64,12 +60,10 @@ async function startServer() {
     console.log('SIGTERM received, shutting down...');
 
     if (process.env.SEND_STARTUP_NOTIFICATION === 'true') {
-      const testUserId = 1;
-      const testTitle = 'Server shutting down';
       const testMessage = new Date().toISOString();
-      sendNotificationToUser(testUserId, testTitle, testMessage, {"channel_id": CHANNEL_NAMES.CHANNEL_OTHER})
-          .then(() => console.log('Test notification sent'))
-          .catch((err) => console.error('Test notification error:', err));
+      sendNotificationToUser(1, "Server shutting down", testMessage, {"channel_id": CHANNEL_NAMES.CHANNEL_OTHER})
+          .then(() => console.log("Test notification sent"))
+          .catch((err) => console.error("Test notification error:", err));
     }
 
     if (server) {

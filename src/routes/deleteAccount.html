@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Account löschen — HvK Client</title>
+    <style>
+        :root{
+            --accent-1:#4e56a2;
+            --accent-2:#a84d97;
+            --accent-3:#69327a;
+            --error:#c82333;
+            --success:#2d8a3a;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        h1 {
+            margin:0 0 6px 0;
+            color:var(--accent-1);
+            font-size:20px;
+        }
+
+        p.lead {
+            margin:0 0 18px 0;
+            color:#444;
+            font-size:14px;
+        }
+
+        form { display:grid; gap:12px; }
+        label { font-size:13px; color:var(--accent-3); }
+        input[type="text"], input[type="password"] {
+            padding:10px 12px;
+            font-size:14px;
+            border:1px solid #d6d6ea;
+            border-radius:8px;
+            box-sizing:border-box;
+            outline:none;
+        }
+        input:focus { box-shadow:0 0 0 4px rgba(168,77,151,0.06); border-color:var(--accent-2); }
+
+        .actions {
+            display:flex;
+            gap:10px;
+            align-items:center;
+            margin-top:6px;
+        }
+
+        button {
+            background:var(--accent-2);
+            color:white;
+            border:none;
+            padding:10px 14px;
+            font-size:14px;
+            border-radius:8px;
+            cursor:pointer;
+        }
+        button.secondary {
+            background:transparent;
+            color:var(--accent-3);
+            border:1px solid #e0d8e6;
+        }
+        button:active { transform:translateY(1px); }
+
+        .msg { font-size:13px; margin-top:8px; min-height:18px; }
+        .msg.error { color:var(--error); }
+        .msg.ok { color:var(--success); }
+
+    </style>
+</head>
+<body>
+    <h1 id="title">Account löschen</h1>
+
+    <p class="lead">Gib deinen Benutzernamen und dein Passwort ein. Durch Klick auf <strong>Account löschen</strong> wird das Konto und alle Nutzerdaten, falls die Login-Daten richtig sind, gelöscht.</p>
+
+    <form id="delForm" onsubmit="handleSubmit(event)" autocomplete="off" novalidate>
+        <div>
+            <label for="username">Benutzername</label>
+            <input id="username" name="username" type="text" required aria-required="true" autocomplete="username" />
+        </div>
+
+        <div>
+            <label for="password">Passwort</label>
+            <input id="password" name="password" type="password" required aria-required="true" autocomplete="current-password" />
+        </div>
+
+        <div class="actions">
+            <button type="submit">Account löschen</button>
+            <button type="button" class="secondary" onclick="resetForm()">Zurücksetzen</button>
+        </div>
+
+        <div id="message" class="msg" role="status" aria-live="polite"></div>
+    </form>
+
+<script>
+    // TODO: http request funktioniert nicht (kommt als OPTIONS an?) // nicht mehr oder?
+    const message = document.getElementById('message');
+    const form = document.getElementById('delForm');
+
+    function setMessage(text, level) {
+        message.textContent = text || '';
+        message.className = 'msg ' + (level === 'ok' ? 'ok' : level === 'error' ? 'error' : '');
+    }
+
+    function resetForm() {
+        form.reset();
+        setMessage('');
+        document.getElementById('username').focus();
+    }
+
+    async function handleSubmit(e) {
+        e.preventDefault();
+        setMessage('');
+
+        const username = document.getElementById('username').value.trim();
+        const password = document.getElementById('password').value;
+
+        if (!username || !password) {
+            setMessage('Bitte Benutzername und Passwort eingeben.', 'error');
+            return;
+        }
+
+        if (!confirm('Bist du sicher, dass du dein Konto löschen möchtest? Diese Aktion kann nicht rückgängig gemacht werden.')) {
+            return;
+        }
+
+        setMessage('Sende Löschanforderung...', '');
+
+        try {
+            const resp = await fetch(`https://rafaelbeckmann.de/api/dev/users/${encodeURIComponent(username)}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ password })
+            });
+
+            if (resp.ok) {
+                setMessage('Account erfolgreich gelöscht.', 'ok');
+                form.reset();
+            } else {
+                let text;
+                try {
+                    const json = await resp.json();
+                    text = json?.message || JSON.stringify(json);
+                } catch (err) {
+                    text = await resp.text();
+                }
+                setMessage(`Fehler beim Löschen: ${resp.status} ${resp.statusText}${text ? ' — ' + text : ''}`, 'error');
+            }
+        } catch (err) {
+            setMessage('Netzwerkfehler: ' + err.message, 'error');
+        }
+    }
+    document.getElementById('username').focus();
+</script>
+</body>
+</html>

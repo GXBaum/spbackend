@@ -27,11 +27,9 @@ export function createAuthRepository(db) {
         getRefreshToken: db.prepare(`
             SELECT t.token,
                    t.expires_at,
-                   u.id AS user_id,
-                   s.sp_username
+                   u.id AS user_id
             FROM user_refresh_token t
                      JOIN user u ON u.id = t.user_id
-                     JOIN user_sp_data s ON s.user_id = u.id
             WHERE t.token = ?
         `),
         deleteRefreshToken: db.prepare(`

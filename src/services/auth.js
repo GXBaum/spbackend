@@ -22,6 +22,8 @@ export async function getLoginCookies(username, password, schoolId = 6078) {
     const finalCookiesWithSid = await loginGetSidCookie(cookiesWithSPHSession);
     console.timeEnd('Login Part 2');
 
+    console.log("final cookies: " + finalCookiesWithSid);
+
     return finalCookiesWithSid;
 }
 

@@ -25,7 +25,7 @@ export async function sendNotificationToUser(
     { repo = createDefaultNotificationsRepository() } = {}
 ) {
     const tokens = repo.getUserNotificationTokens(userId) || [];
-    console.log(`Tokens for user ${userId}:`, tokens);
+    //console.log(`Tokens for user ${userId}:`, tokens);
 
     if (!tokens.length) {
         return { userId, sent: 0, invalid: [], failures: [], totalTokens: 0 };

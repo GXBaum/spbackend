@@ -38,13 +38,12 @@ export async function vpCheckForDifferences(
 
     // AI vp info extraction, non-blocking
     console.log("ai test");
-    const oldSummaryRow = vpRepo.getLatestVpInfo(stringDay);
-    const oldSummary = (oldSummaryRow?.data || "");
-    console.log("oldSummary: ", oldSummary);
+    const oldVpInfo = vpRepo.getLatestVpInfo(stringDay);
+    console.log("oldSummary: ", oldVpInfo);
 
 
-    const systemPrompt = `Du bist ein deutscher Extraktions-Assistent für den Vertretungsplan einer Schule. Oben stehen, falls es welche gibt, besondere Infos. Sei Intelligent und suche diese raus. Die 3 Tabellen für fehlende Lehrer, Klassen und Räume sind normal und zählen nicht dazu. Ebenfalls gehören die normalen max. 2 Tabellen für Vertretungen und Ersatzräume ebenfalls nicht dazu. Nur besondere Infos. Antworte nur damit, mit nichts anderem. Benutz alle normale deutsche Zeichen, also auch ß,ü etc, falls angemessen. Eins ist der normale text, und falls es lang ist, kannst du auch in summary eine kürzere version schreiben, welche ungefähr max. 6 Wörter sein soll. der normale soll aber original (aber sinnvoll) bleiben.
-    Wenn die alte Zusammenfassung noch korrekt ist, setze es null.
+    const systemPrompt = `Du bist ein deutscher Extraktions-Assistent für den Vertretungsplan einer Schule. Oben stehen, falls es welche gibt, besondere Infos. Sei intelligent und suche diese raus. Die 3 Tabellen für fehlende Lehrer, Klassen und Räume sind normal und zählen nicht dazu. Ebenfalls gehören die normalen max. 2 Tabellen für Vertretungen und Ersatzräume ebenfalls nicht dazu. Nur besondere Infos. Folgende Beispiele gehören nicht dazu: "In Arbeit" oder "Vertretungsplan für <Datum>", sowie der Name der Schule. Generell: nur Sachen die wirklich wichtig sind, da Nutzer Benachrichtigt werden. Fehlende Lehrer etc sind irrelevant, nur etwas was nicht immer da steht. Antworte nur damit, mit nichts anderem. Benutz alle normale deutsche Zeichen, also auch ß,ü etc, falls angemessen. Eins ist der normale text, so wie er im Plan steht. schreib auch in summary eine kürzere version, welche ungefähr max. 15 Wörter sein soll. Die Summary kann auch formatiert sein. Wichtige Infos sollten drinne stehen, es sei den der Platz reicht nicht, dann such nach wichtigkeit aus, und gib den rest nur ungefähr an. der normale soll aber original (aber sinnvoll) bleiben.
+    Du erhältst deine vorherigen extrhaierten Infos. Wenn die alten Daten noch korrekt sind, setze es null. Falls es jetzt keine Infos mehr gibt, weil der Vertretungsplan jetzt anders oder neu ist, gibt bei beidem einen leeren String zurück.
     Gib ausschließlich gültiges JSON zurück (kein Text, keine Erklärungen).
     Schema:
     {
@@ -54,28 +53,38 @@ export async function vpCheckForDifferences(
     
     `;
 
-    const prompt = `Vertretungsplan:\n${data.rawPage}\n\nAlte Zusammenfassung: ${oldSummary}`
+    const prompt = `Vertretungsplan:\n${data.rawPage}\n\nDeine alte spezielle Info, die du vorher extrahiert hast:${oldVpInfo?.data || "(keine vorhanden)"}\nDeine alte Zusammenfassung: ${oldVpInfo?.summary || "(keine vorhanden)"}`;
 
 
     aiService(systemPrompt, prompt)
         .then((completion) => {
             console.log("completion: " + JSON.stringify(completion));
             const rawContent = completion.choices?.[0]?.message?.content
-            const content = JSON.parse(rawContent).text // TODO add summary support
+            const contentJson = JSON.parse(rawContent)
 
-            if (content === "null") {
+            if (contentJson.text === "null" || contentJson.text === null) {
                 console.log("no changes to ai info");
+            } else if (contentJson.text === "") {
+                console.log("no ai info")
+                vpRepo.insertVpInfo(stringDay, null, null);
             } else {
-                console.log("inserting new info: " + content);
-                vpRepo.insertVpInfo(stringDay, content);
+                console.log("inserting new info: " + contentJson.text + ", summary: " + contentJson.summary);
+                vpRepo.insertVpInfo(stringDay, contentJson.text, contentJson.summary);
 
                 const users = userRepo.getUsersWithEnabledNotifications();
                 console.log(`users ${JSON.stringify(users)}`);
                 console.log("notifying users for info");
 
+                // TODO: uncomment
+                // FIXME: UNCOMMENT
                 users.forEach((user) => {
-                    notifier(user.id, `VP Info am ${stringDay === "today" ? "heutigen" : "nächsten"} Schultag`, content)
+                    notifier(user.id, `VP Info am ${stringDay === "today" ? "heutigen" : "nächsten"} Schultag`, contentJson.summary,
+                        {
+                            channel_id: channelNames.CHANNEL_VP_UPDATES
+                        })
                 })
+                //notifier(1, `VP Info am ${stringDay === "today" ? "heutigen" : "nächsten"} Schultag`, contentJson.summary)
+
             }
         })
         .catch(error => {
@@ -87,6 +96,81 @@ export async function vpCheckForDifferences(
     console.log("changedCourses ", changedCourses);
     await notifyUsers(changedCourses, stringDay, data.websiteDate, vpRepo, notifier, deepLinkBuilder, channelNames);
 
+
+    // TODO: ... yes. yes, i am ashamed.
+    const changedDifferentRoomsCourses = await processDifferentRooms(data, stringDay, vpRepo);
+    await notifyUsersDifferentRooms(changedDifferentRoomsCourses, stringDay, data.websiteDate, vpRepo, notifier, deepLinkBuilder, channelNames);
+
+}
+
+export async function processDifferentRooms(data, stringDay, vpRepo) {
+    const siteDate = data.websiteDate;
+    const oldDifferentRooms = vpRepo.listAllDifferentRoomsForDay(stringDay, siteDate) || [];
+    const differentRooms = Array.isArray(data.differentRooms) ? data.differentRooms : [];
+
+    const coursesWithUpdates = new Set();
+
+    // mark deletions
+    for (const oldRow of oldDifferentRooms) {
+        if (isDeletedSubstitution(differentRooms, oldRow, siteDate)) {
+            const deleted = vpRepo.markDifferentRoomAsDeleted({
+                course: oldRow.course,
+                day: stringDay,
+                hour: oldRow.hour ?? null,
+                original: oldRow.original ?? null,
+                replacement: oldRow.replacement ?? null,
+                description: oldRow.description ?? null,
+                vp_date: oldRow.vp_date
+            });
+            if (deleted && oldRow.course) coursesWithUpdates.add(oldRow.course);
+        }
+    }
+
+    // insert new rows
+    for (const row of differentRooms) {
+        if (!isNewSubstitution(oldDifferentRooms, row, siteDate)) continue;
+        vpRepo.insertDifferentRoom({
+            course: row.course,
+            day: stringDay,
+            hour: row.hour ?? null,
+            original: row.original ?? null,
+            replacement: row.replacement ?? null,
+            description: row.description ?? null,
+            vp_date: siteDate
+        });
+        if (row.course) coursesWithUpdates.add(row.course);
+    }
+    console.log("changed different rooms: " + Array.from(coursesWithUpdates));
+
+    return Array.from(coursesWithUpdates);
+}
+
+export async function notifyUsersDifferentRooms(
+    changedCourses,
+    stringDay,
+    websiteDate,
+    vpRepo,
+    notifier,
+    deepLinkBuilder,
+    channelNames
+) {
+    for (const course of changedCourses) {
+        const users = vpRepo.getUsersWithVPCourseName(course);
+        const differentRooms = vpRepo.listDifferentRooms(course, stringDay, websiteDate);
+        if (differentRooms.length === 0) continue;
+
+        const message = formatSubstitutionsMessage(differentRooms);
+        const title = `${course}: Ersatzräume am ${stringDay === "today" ? "heutigen" : "nächsten"} Schultag`;
+        const uri = deepLinkBuilder("vpScreen", {"course": course});
+
+        for (const { user_id } of users) {
+            console.log(`sending to user ${user_id}`);
+            await notifier(user_id, title, message, {
+                deepLink: uri,
+                channel_id: channelNames.CHANNEL_VP_UPDATES
+            });
+        }
+    }
 }
 
 export function isNewSubstitution(oldData, substitution, websiteDate) {
@@ -140,7 +224,7 @@ export async function processSubstitutions(data, stringDay, vpRepo) {
     }
 
     // TODO: add transactions
-    // insert new rows that didn't exist before
+    // insert new rows
     for (const substitution of substitutions) {
         //console.log(`substitution: ${substitution.hour}, ${substitution.course}`);
 
@@ -161,39 +245,6 @@ export async function processSubstitutions(data, stringDay, vpRepo) {
     }
     console.log("changed substitutions: " + Array.from(coursesWithUpdates));
     return Array.from(coursesWithUpdates);
-}
-export async function processSubstitutionsOld(data, stringDay, vpRepo) {
-    let coursesWithUpdates = [];
-
-    for (const substitution of data.substitutions) {
-        console.log(`substitution: ${substitution.hour}, ${substitution.course}`);
-        const oldData = vpRepo.listSubstitutions(
-            substitution.course,
-            stringDay,
-            data.websiteDate
-        );
-
-        if (!isNewSubstitution(oldData, substitution, data.websiteDate)) {
-            continue;
-        }
-
-        vpRepo.insertSubstitution({
-            course: substitution.course,
-            day: stringDay,
-            hour: substitution.hour ?? null,
-            original: substitution.original ?? null,
-            replacement: substitution.replacement ?? null,
-            description: substitution.description ?? null,
-            vp_date: data.websiteDate
-        });
-
-        if (!coursesWithUpdates.includes(substitution.course)) {
-            coursesWithUpdates.push(substitution.course);
-        }
-
-    }
-
-    return coursesWithUpdates;
 }
 
 

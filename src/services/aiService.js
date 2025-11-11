@@ -23,7 +23,7 @@ export async function aiService(systemPrompt, prompt) {
     }
 
     const completion = await openai.chat.completions.create({
-        model: 'x-ai/grok-4-fast:free',
+        models: ["x-ai/grok-4-fast", "openai/gpt-5-nano", "openai/gpt-oss-120b"],
         messages: [
             {
                 role: "system",

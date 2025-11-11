@@ -15,7 +15,7 @@ export function createVpRepository(db) {
             INSERT INTO vp_difference (day, data)
             VALUES (?, ?)
             ON CONFLICT(day) DO UPDATE SET data       = excluded.data,
-                                           updated_at = strftime('now')
+                                           updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
         `),
 
         // raw history
@@ -84,6 +84,60 @@ export function createVpRepository(db) {
             LIMIT 1
         `),
 
+        // different rooms
+        listDifferentRooms: db.prepare(`
+            SELECT course, hour, original, replacement, description, vp_date
+            FROM vp_different_room
+            WHERE course = ?
+              AND day = ?
+              AND vp_date = ?
+              AND is_deleted = 0
+            ORDER BY CAST(hour AS INTEGER)
+        `),
+        listAllDifferentRooms: db.prepare(`
+            SELECT course, hour, original, replacement, description, vp_date, is_deleted
+            FROM vp_different_room
+            WHERE course = ?
+              AND day = ?
+              AND vp_date = ?
+            ORDER BY CAST(hour AS INTEGER)
+        `),
+        listAllDifferentRoomsforDay: db.prepare(`
+            SELECT course, hour, original, replacement, description, vp_date
+            FROM vp_different_room
+            WHERE day = ?
+              AND vp_date = ?
+              AND is_deleted = 0
+            ORDER BY CAST(hour AS INTEGER)
+        `),
+        insertDifferentRoom: db.prepare(`
+            INSERT OR IGNORE INTO vp_different_room
+                (course, day, hour, original, replacement, description, vp_date)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        `),
+        markDifferentRoomAsDeleted: db.prepare(`
+            UPDATE vp_different_room
+            SET is_deleted = 1
+            WHERE course = ?
+              AND day = ?
+              AND hour = ?
+              AND original = ?
+              AND replacement = ?
+              AND description = ?
+              AND vp_date = ?
+              AND is_deleted = 0
+        `),
+        deleteVpDifferentRoomsForDay: db.prepare(`
+            DELETE
+            FROM vp_different_room
+            WHERE day = ?
+        `),
+        deleteVpDifferentRoomsForCourse: db.prepare(`
+            DELETE
+            FROM vp_different_room
+            WHERE course = ?
+        `),
+
         // user selected courses
         insertUserVpSelectedCourse: db.prepare(`
             INSERT OR IGNORE INTO user_vp_course (user_id, course)
@@ -108,8 +162,8 @@ export function createVpRepository(db) {
         `),
 
         insertVpInfo: db.prepare(`
-            INSERT INTO vp_info (day, data)
-            VALUES (?, ?)
+            INSERT INTO vp_info (day, data, summary)
+            VALUES (?, ?, ?)
         `),
         getLatestVpInfo: db.prepare(`
             SELECT *
@@ -117,6 +171,16 @@ export function createVpRepository(db) {
             WHERE day = ?
             ORDER BY fetched_at DESC
             LIMIT 1
+        `),
+        getLatestVpInfoBothDays: db.prepare(`
+            SELECT *
+            FROM vp_info v
+            WHERE v.fetched_at = (
+                SELECT MAX(fetched_at)
+                FROM vp_info
+                WHERE day = v.day
+            )
+            AND (v.day = 'today' OR v.day = 'tomorrow')
         `),
         getVpInfoHistory: db.prepare(`
             SELECT *
@@ -198,6 +262,70 @@ export function createVpRepository(db) {
             ).changes > 0;
         },
 
+
+
+        listDifferentRooms(course, day, vpDate) {
+            return stmts.listDifferentRooms.all(course, day, vpDate);
+        },
+        listAllDifferentRooms(course, day, vpDate) {
+            return stmts.listAllDifferentRooms.all(course, day, vpDate);
+        },
+        listAllDifferentRoomsForDay(day, vpDate) {
+            return stmts.listAllDifferentRoomsforDay.all(day, vpDate);
+        },
+        insertDifferentRoom({course, day, hour, original, replacement, description, vp_date}) {
+            stmts.insertDifferentRoom.run(
+                course,
+                day,
+                hour ?? null,
+                original ?? null,
+                replacement ?? null,
+                description ?? null,
+                vp_date
+            );
+        },
+        markDifferentRoomAsDeleted({course, day, hour, original, replacement, description, vp_date}) {
+            return stmts.markDifferentRoomAsDeleted.run(
+                course, day, hour ?? null, original ?? null, replacement ?? null, description ?? null, vp_date
+            ).changes > 0;
+        },
+        deleteDifferentRoomsForDay(day) {
+            stmts.deleteVpDifferentRoomsForDay.run(day);
+        },
+        deleteDifferentRoomsForCourse(course) {
+            stmts.deleteVpDifferentRoomsForCourse.run(course);
+        },
+        listDifferentRoomsForCourses(courses, day, vpDate) {
+            if (!courses?.length) return [];
+            const placeholders = courses.map(() => "?").join(",");
+            return db.prepare(`
+                SELECT course, hour, original, replacement, description, vp_date
+                FROM vp_different_room
+                WHERE course IN (${placeholders})
+                  AND day = ?
+                  AND vp_date = ?
+                  AND is_deleted = 0
+                ORDER BY course, CAST(hour AS INTEGER)
+            `).all(...courses, day, vpDate);
+        },
+        listAllDifferentRoomsForCourses(courses, day, vpDate) {
+            if (!courses?.length) return [];
+            const placeholders = courses.map(() => "?").join(",");
+            return db.prepare(`
+                SELECT course, hour, original, replacement, description, vp_date, is_deleted
+                FROM vp_different_room
+                WHERE course IN (${placeholders})
+                  AND day = ?
+                  AND vp_date = ?
+                ORDER BY course, CAST(hour AS INTEGER)
+            `).all(...courses, day, vpDate);
+        },
+
+
+
+
+
+
         getLatestVpDate() {
             return stmts.getLatestVpDate.pluck().get() ?? null;
         },
@@ -216,11 +344,14 @@ export function createVpRepository(db) {
             return stmts.getUsersWithVPCourseName.all(course);
         },
 
-        insertVpInfo(day, data) {
-            stmts.insertVpInfo.run(day, data);
+        insertVpInfo(day, data, summary) {
+            stmts.insertVpInfo.run(day, data, summary);
         },
         getLatestVpInfo(day) {
             return stmts.getLatestVpInfo.get(day);
+        },
+        getLatestVpInfoBothDays() {
+            return stmts.getLatestVpInfoBothDays.all();
         },
         getVpInfoHistory(day) {
             return stmts.getVpInfoHistory.all(day);

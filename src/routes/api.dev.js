@@ -5,7 +5,15 @@ import {sendNotificationToUser} from "../services/notifications.js";
 import {updateAllSpUserData} from "../services/updateAllSpUserData.js";
 import {scrapeVpData} from "../services/scrapeVp.js";
 import {vpCheckForDifferences} from "../services/vpCheckForDifferences.js";
-import {authenticateToken, authorizeUser, login, refreshToken} from '../auth.js';
+import {
+    authenticateToken,
+    authorizeUser,
+    createAccessToken,
+    createRefreshToken,
+    login,
+    refreshToken,
+    verifyPassword
+} from '../auth.js';
 import {buildDeeplink} from "../utils/deepLinkBuilder.js";
 import {CHANNEL_NAMES} from "../config/constants.js";
 import {aiService} from "../services/aiService.js";
@@ -15,6 +23,8 @@ import {createDefaultAuthRepository} from "../db/repositories/authRepository.js"
 import {createDefaultMarkRepository} from "../db/repositories/marksRepository.js";
 import {createDefaultCourseRepository} from "../db/repositories/courseRepository.js";
 import {createDefaultNotificationsRepository} from "../db/repositories/notificationsRepository.js";
+import {readFileSync} from "fs";
+import path from "path";
 
 const vpRepo = createDefaultVpRepository();
 const userRepo = createDefaultUserRepository();
@@ -30,6 +40,9 @@ const speedLimiter = slowDown({
     delayAfter: 100,
     delayMs: (hits) => (hits - 100) * 100,
     keyGenerator: (req) => req.ip,
+    onLimitReached: (req, res, options) => {
+        console.log(`Speed limit reached for IP: ${req.ip} at ${new Date().toISOString()}`);
+    }
 });
 
 const generalLimiter = rateLimit({
@@ -38,18 +51,15 @@ const generalLimiter = rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
     keyGenerator: (req) => req.ip,
+    onLimitReached: (req, res, options) => {
+        console.log(`Rate limit reached for IP: ${req.ip} at ${new Date().toISOString()}`);
+    }
 });
 
 router.use(speedLimiter);
 router.use(generalLimiter);
 
-router.use((req, res, next) => {
-    console.log(`Incoming request: ${req.method} ${req.originalUrl} from ${req.ip}`);
-    next();
-});
-
 // User registration
-// TODO directly return auth
 router.post('/users', async (req, res) => {
     const { isNotificationEnabled  } = req.body;
 
@@ -59,13 +69,49 @@ router.post('/users', async (req, res) => {
         return res.status(400).json({ success: false, message: 'isNotificationEnabled are required' });
     }
     try {
-        const userId = await userRepo.insertUser(isNotificationEnabled);
+        const userId = userRepo.insertUser(isNotificationEnabled);
+
+        const refreshToken = createRefreshToken();
+        const accessToken = createAccessToken(userId);
+
+        const expiryDate = new Date();
+        expiryDate.setDate(expiryDate.getDate() + 90); // 90-day expiry
+
+        authRepo.storeRefreshToken(userId, refreshToken, expiryDate.toISOString());
+
+
         console.log('User created successfully');
-        await sendNotificationToUser(1, "account erstellt", { "channel_id": CHANNEL_NAMES.CHANNEL_OTHER });
-        res.status(201).json({ success: true, message: 'User created successfully', userId });
+        try {
+            await sendNotificationToUser(1, "account erstellt", userId,{ "channel_id": CHANNEL_NAMES.CHANNEL_OTHER });
+        } catch (err){
+            console.log("couldn't send notification: " + err);
+        }
+        res.status(201).json({ success: true, accessToken, refreshToken, userId: userId });
+
     } catch (error) {
         console.error('Error creating user:', error);
         res.status(500).json({ success: false, message: 'Failed to create user' });
+    }
+});
+
+router.delete('/users/:username', verifyPassword, async (req, res) => {
+    const { username } = req.params;
+    const { password } = req.body;
+
+    try {
+        console.log("Received user DELETE request");
+        sendNotificationToUser(1, "account löschung angefragt", username, { "channel_id": CHANNEL_NAMES.CHANNEL_OTHER }).catch(()=>{});
+
+        const deleted = userRepo.deleteUserWithSpCredentials(username, password);
+        if (!deleted) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+        sendNotificationToUser(1, "account gelöscht", username, { "channel_id": CHANNEL_NAMES.CHANNEL_OTHER }).catch(()=>{});
+        // TODO: Optionally revoke tokens
+        res.status(200).json({ success: true, message: 'Account deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting user:', error);
+        res.status(500).json({ success: false, message: 'Failed to delete account' });
     }
 });
 
@@ -107,7 +153,13 @@ router.get('/users/:userId/marks', authenticateToken, authorizeUser, (req, res) 
 router.get('/users/:userId/:courseId/marks', authenticateToken, authorizeUser, (req, res) => {
     const { userId, courseId } = req.params;
     try {
-        const marks = markRepo.getUserMarksForCourse(userId, courseId);
+        const marks = markRepo.getUserMarksForCourse(userId, courseId)
+            // quick fix for json scheme
+            .map(sub => ({
+                ...sub,
+                isDeleted: Boolean(Number(sub.is_deleted)),
+                is_deleted: undefined,
+            }));
         res.status(200).json({ success: true, marks });
     } catch (error) {
         console.error('Error getting marks:', error);
@@ -286,24 +338,6 @@ router.get('/vpUpdate', async (req, res) => {
     }
 });
 
-// dev
-// TODO: remove
-router.get('/vpSubstitutions/:courseName/:day', async (req, res) => {
-    const courseName = decodeURIComponent(req.params.courseName);
-    const { day } = req.params;
-    if (day !== "today" && day !== "tomorrow") {
-        return res.status(400).json({ success: false, message: 'Invalid day' });
-    }
-    const dayInt = day === "today" ? 1 : 2;
-    try {
-        const vpDate = await scrapeVpData(`https://www.kleist-schule.de/vertretungsplan/schueler/aktuelle%20plaene/${dayInt}/vp.html`);
-        const data = vpRepo.listSubstitutions(courseName, day, vpDate.websiteDate);
-        res.status(200).json({ success: true, substitutions: data });
-    } catch (error) {
-        console.error('Error fetching substitutions:', error);
-        res.status(500).json({ success: false, message: 'Failed to trigger update' });
-    }
-});
 
 // TODO: das hier gut machen, ist noch größtenteils kopiert von oben
 router.get('/vpSubstitutions/:courseName', async (req, res) => {
@@ -316,7 +350,6 @@ router.get('/vpSubstitutions/:courseName', async (req, res) => {
         for (let dayInt = 1; dayInt <= 2; dayInt++) {
             const vpDate = await scrapeVpData(`https://www.kleist-schule.de/vertretungsplan/schueler/aktuelle%20plaene/${dayInt}/vp.html`);
             const day = dayInt === 1 ? "today" : "tomorrow";
-            //const data = vpRepo.listSubstitutions(courseName, day, vpDate.websiteDate);
             const data = vpRepo.listAllSubstitutions(courseName, day, vpDate.websiteDate);
 
             vals.push(data);
@@ -340,7 +373,7 @@ router.get('/vpSubstitutions', async (req, res) => {
     try {
         const allSubstitutions = {};
         for (const courseName of courseNames) {
-            allSubstitutions[courseName] = { today: [], tomorrow: [] };
+            allSubstitutions[courseName] = { today: [], tomorrow: [], roomsToday: [], roomsTomorrow: [] };
         }
         for (let dayInt = 1; dayInt <= 2; dayInt++) {
             const vpDate = await scrapeVpData(`https://www.kleist-schule.de/vertretungsplan/schueler/aktuelle%20plaene/${dayInt}/vp.html`);
@@ -349,14 +382,29 @@ router.get('/vpSubstitutions', async (req, res) => {
                 // quick fix for json scheme
                 .map(sub => ({
                     ...sub,
-                    isDeleted: sub.is_deleted,
-                    is_deleted: undefined
+                    isDeleted: Boolean(Number(sub.is_deleted)),
+                    is_deleted: undefined,
                 }));
             substitutions.forEach(sub => {
                 if (allSubstitutions[sub.course]) {
                     allSubstitutions[sub.course][day].push(sub);
                 }
             });
+
+            // TODO: improve this code, this is largely duplicated
+            const roomDay = dayInt === 1 ? "roomsToday" : "roomsTomorrow";
+            const rooms = vpRepo.listAllDifferentRoomsForCourses(courseNames, day, vpDate.websiteDate)
+                .map(sub => ({
+                    ...sub,
+                    isDeleted: Boolean(Number(sub.is_deleted)),
+                    is_deleted: undefined,
+                }));
+            rooms.forEach(sub => {
+                if (allSubstitutions[sub.course]) {
+                    allSubstitutions[sub.course][roomDay].push(sub);
+                }
+            });
+
         }
         res.status(200).json({ success: true, substitutions: allSubstitutions });
     } catch (error) {
@@ -382,8 +430,27 @@ router.get('/courseSearch', (req, res) => {
     res.status(200).json({ success: true, courses: result });
 });
 
+router.get('/vp/info', (req, res) => {
+    const result = vpRepo.getLatestVpInfoBothDays();
+    console.log("vp info result: " + result);
+    res.status(200).json({ success: true, info: result });
+});
+
+
 router.get("/rick", (req, res) => {
     res.redirect("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
 });
+
+
+// TODO: necessary Play Store links, move somewhere else
+router.get("/deleteAccount", (req, res) => {
+    const html = readFileSync(path.join(process.cwd(), 'src/routes/deleteAccount.html'), "utf8");
+    res.send(html);
+});
+router.get("/Datenschutzerkl%C3%A4rung", (req, res) => {
+    const html = readFileSync(path.join(process.cwd(), 'src/routes/Datenschutzerklärung.html'), "utf8");
+    res.send(html);
+});
+
 
 export default router;

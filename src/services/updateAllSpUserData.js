@@ -1,7 +1,6 @@
 import {getLoginCookies} from "./auth.js";
 import {getMarks} from "./marks.js";
 import {sendNotificationToUser} from "./notifications.js";
-import {getTeachers} from "./teachers.js";
 import fetch from "node-fetch";
 import {CHANNEL_NAMES, USER_AGENT} from "../config/constants.js";
 import * as cheerio from "cheerio";
@@ -12,6 +11,7 @@ import {createDefaultCourseRepository} from "../db/repositories/courseRepository
 import {createDefaultMarkRepository} from "../db/repositories/marksRepository.js";
 import {createDefaultTeacherRepository} from "../db/repositories/teacherRepository.js";
 
+// TODO FIXME: manchmal ist finalUrl connect.schulportal.hessen.de/weiterleitung.html, daher kommen die falschen trigger glaube ich
 export async function updateAllSpUserData(
     userId, schoolId = 6078,
     {
@@ -57,7 +57,7 @@ export async function updateAllSpUserData(
         const html = await response.text();
         const $ = cheerio.load(html);
 
-        const courses = getCourses2($);
+        const courses = getCourses($);
 
         for (const course of courses) {
             courseRepo.insertCourse(course.id, course.name);
@@ -68,11 +68,11 @@ export async function updateAllSpUserData(
 
         for (const halfYearToProcess of [1, 2]) {
             console.log("user:", userId + " / " + spUsername);
-            const existingMarks = marksRepo.getUserMarks(userId)
+            const existingMarks = marksRepo.getUserActiveMarks(userId);
             console.log("Existing marks:", existingMarks.length);
             const existingMarksForHalfYear = existingMarks.filter(mark => mark.half_year === halfYearToProcess);
 
-            console.log("Existing marks for half year:", halfYearToProcess);
+            console.log("Existing marks for half year ", halfYearToProcess);
 
             // Store all new marks for this half year
             const newMarksForHalfYear = [];
@@ -102,10 +102,21 @@ export async function updateAllSpUserData(
                 return !existingMarksForHalfYear.some(existingMark =>
                     existingMark.name === newMark.name &&
                     existingMark.date === newMark.date &&
-                    existingMark.course_id === newMark.courseId
+                    existingMark.course_id === newMark.courseId &&
+                    existingMark.grade === newMark.grade
                 );
             });
+            const deletedMarks = existingMarksForHalfYear.filter(existingMark => {
+                return !newMarksForHalfYear.some(newMark =>
+                    existingMark.name === newMark.name &&
+                    existingMark.date === newMark.date &&
+                    existingMark.course_id === newMark.courseId &&
+                    existingMark.grade === newMark.grade
+                )
+            })
 
+            console.log("new Marks: " + trulyNewMarks);
+            console.log("deleted Marks: " + deletedMarks);
 
             const newMarksByCourse = {};
             for (const mark of trulyNewMarks) {
@@ -125,11 +136,14 @@ export async function updateAllSpUserData(
                 // Create detailed message about the new marks
                 let message = `Du hast ${newMarks.length} neue ${newMarks.length === 1 ? 'Note' : 'Noten'} in ${courseName}:`;
                 newMarks.forEach(mark => {
-                    message += `\n- ${mark.name}: ${mark.grade}`;
+                    //message += `\n- ${mark.name}: ${mark.grade}`;
+                    message += `\n- ${mark.name}`;
                 });
+                message += "\ntippen, um Note zu öffnen"
 
                 // TODO: soll die Note ein query argument sein?
                 const uri = buildDeeplink(`revealmark/${newMarks[0].grade.toString()}`)
+                console.log(message);
                 await sendNotificationToUser(
                     userId,
                     `Neue ${newMarks.length === 1 ? 'Note' : 'Noten'} eingetragen`,
@@ -139,24 +153,29 @@ export async function updateAllSpUserData(
             }
 
 
-            //await db.connect();
-            // Now delete and insert all marks
-            // TODO: i mean what the fuck
-            marksRepo.deleteMarksOfHalfYear(userId, halfYearToProcess);
-
-            // Insert all new marks
-            for (const mark of newMarksForHalfYear) {
-                console.log("Inserting mark:", JSON.stringify(mark));
-                const res = marksRepo.insertMark(mark)
-                //console.log("Inserted mark:", res);
-            }
+            trulyNewMarks.forEach(mark => {
+                marksRepo.insertMark(mark);
+            });
+            deletedMarks.forEach(mark => {
+                //marksRepo.markMarkAsDeleted(mark)
+                // TODO: improve
+                marksRepo.markMarkAsDeleted({
+                    name: mark.name,
+                    date: mark.date,
+                    grade: mark.grade,
+                    halfYear: mark.half_year,
+                    courseId: mark.course_id,
+                    userId: mark.user_id
+                });
+                console.log("Marked as deleted:", JSON.stringify(mark));
+            })
         }
 
 
 
 
         console.time("getTeachers");
-        const { teachers, coursesTeachers } = await getTeachers2($);
+        const { teachers, coursesTeachers } = await getTeachers($);
         console.log("Teachers found:", teachers.length);
         console.log("Course-Teacher relationships found:", coursesTeachers.length);
 
@@ -176,148 +195,6 @@ export async function updateAllSpUserData(
             console.error("Error fetching messages:", error);
         }
 
-
-
-
-
-
-
-        /*
-        console.time("getCourses");
-        const courses = await getCourses(loginCookies);
-        for (const course of courses) {
-            await db.insertCourse({ id: course.id, name: course.name }); // Use db.insertCourse
-        }
-        console.timeEnd("getCourses");
-
-        for (const course of courses) {
-            await db.insertUserCourse(SpUsername, course.id);
-        }
-
-        console.time("getMarks");
-
-        /*
-        // Process both half years
-        for (const halfYearToProcess of [1, 2]) {
-            await db.deleteAllMarksOfHalfYear(SpUsername, halfYearToProcess); // Delete second half year
-
-            console.log(`Processing half year ${halfYearToProcess}`);
-            for (const course of courses) {
-                const marks = await getMarks(loginCookies, course.id, halfYearToProcess);
-
-                for (const mark of marks) {
-                    await db.insertMark({
-                        name: mark.name,
-                        date: mark.date,
-                        grade: mark.grade,
-                        courseId: course.id,
-                        halfYear: halfYearToProcess,
-                        SpUsername: SpUsername,
-                    });
-                }
-            }
-        }
-        */
-/*
-        for (const halfYearToProcess of [1, 2]) {
-            const existingMarks = await db.getUserGrades(SpUsername);
-            const existingMarksForHalfYear = existingMarks.filter(mark => mark.half_year === halfYearToProcess);
-
-            // Store all new marks for this half year
-            const newMarksForHalfYear = [];
-
-            // Collect all new marks from the API
-            console.log(`Processing half year ${halfYearToProcess}`);
-            for (const course of courses) {
-                const marks = await getMarks(loginCookies, course.id, halfYearToProcess);
-
-                marks.forEach(mark => {
-                    newMarksForHalfYear.push({
-                        name: mark.name,
-                        date: mark.date,
-                        grade: mark.grade,
-                        courseId: course.id,
-                        halfYear: halfYearToProcess,
-                        SpUsername: SpUsername,
-                    });
-                });
-            }
-
-            // Find truly new marks by comparing name, date and courseId
-            const trulyNewMarks = newMarksForHalfYear.filter(newMark => {
-                return !existingMarksForHalfYear.some(existingMark =>
-                    existingMark.name === newMark.name &&
-                    existingMark.date === newMark.date &&
-                    existingMark.course_id === newMark.courseId
-                );
-            });
-
-
-            const newMarksByCourse = {};
-            for (const mark of trulyNewMarks) {
-                if (!newMarksByCourse[mark.courseId]) {
-                    newMarksByCourse[mark.courseId] = [];
-                }
-                newMarksByCourse[mark.courseId].push(mark);
-            }
-
-
-            // Send notifications for new marks
-            for (const courseId in newMarksByCourse) {
-                const courseName = courses.find(c => c.id.toString() === courseId.toString())?.name || "Unbekannter Kurs";
-                const newMarks = newMarksByCourse[courseId];
-
-                // Create detailed message about the new marks
-                let message = `Du hast ${newMarks.length} neue ${newMarks.length === 1 ? 'Note' : 'Noten'} in ${courseName}:`;
-                newMarks.forEach(mark => {
-                    message += `\n- ${mark.name}: ${mark.grade}`;
-                });
-
-                await sendNotificationToUser(
-                    SpUsername,
-                    `Neue ${newMarks.length === 1 ? 'Note' : 'Noten'} eingetragen`,
-                    message,
-                    "high"
-                );
-            }
-
-            // Now delete and insert all marks
-            await db.deleteAllMarksOfHalfYear(SpUsername, halfYearToProcess);
-
-            // Insert all new marks
-            for (const mark of newMarksForHalfYear) {
-                await db.insertMark(mark);
-            }
-        }
-
-
-
-
-        console.timeEnd("getMarks");
-
-        console.time("getTeachers");
-        const { teachers, coursesTeachers } = await getTeachers(loginCookies);
-        console.log("Teachers found:", teachers.length);
-        console.log("Course-Teacher relationships found:", coursesTeachers.length);
-
-        for (const teacher of teachers) {
-            await db.insertTeacher({
-                id: teacher.id,
-                name: teacher.text,
-                type: teacher.type,
-                logo: teacher.logo,
-                abbreviation: teacher.abbreviation,
-                email: teacher.email
-            });
-        }
-        for (const relation of coursesTeachers) {
-            await db.insertCourseTeacher(relation.courseId, relation.teacherId);
-        }
-
-
-        console.timeEnd("getTeachers");
-
-*/
         console.timeEnd('Script');
 
     } catch (error) {
@@ -326,7 +203,7 @@ export async function updateAllSpUserData(
     }
 }
 
-function getCourses2($) {
+function getCourses($) {
     const courses = [];
 
     $("#anwesend table.table tbody tr").each((i, row) => {
@@ -353,7 +230,7 @@ function getCourses2($) {
 
 
 
-async function getTeachers2($) {
+async function getTeachers($) {
 
     let teachers = [];
     let coursesTeachers = [];
