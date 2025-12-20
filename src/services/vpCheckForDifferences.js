@@ -109,7 +109,7 @@ export async function vpCheckForDifferences(
     );
 
 
-    // TODO: ... yes. yes, i am ashamed.
+    // TODO: ... yes. yes, i am (now slightly less) ashamed.
     const changedDifferentRoomsCourses = await processSubstitutions(data, stringDay, false, vpRepo);
     await notifyUsers(
         changedDifferentRoomsCourses,

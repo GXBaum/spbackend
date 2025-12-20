@@ -6,6 +6,7 @@ import * as path from "node:path";
 let db;
 
 // TODO: user_refresh_token kann unendlich einträge pro nutzer haben
+// TODO: change substitutions and different rooms table name to remove "v2"
 const schema = `
 BEGIN;
 
