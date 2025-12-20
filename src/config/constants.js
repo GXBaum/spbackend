@@ -2,6 +2,7 @@ export const USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Apple
 export const EXPRESS_PORT = 5000;
 export const DB_PATH = "./db/database_test_v2.db";
 
+// TODO: oops, die habe ich dann doch nicht benutzt
 export const TABLE_NAMES = {
     USER: "user",
     COURSE: "course",

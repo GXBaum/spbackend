@@ -37,23 +37,31 @@ const router = express.Router();
 
 const speedLimiter = slowDown({
     windowMs: 15 * 60 * 1000,
-    delayAfter: 100,
+    delayAfter: 2000,
     delayMs: (hits) => (hits - 100) * 100,
     keyGenerator: (req) => req.ip,
-    onLimitReached: (req, res, options) => {
-        console.log(`Speed limit reached for IP: ${req.ip} at ${new Date().toISOString()}`);
-    }
+    // onLimitReached was removed https://express-rate-limit.github.io/WRN_ERL_DEPRECATED_ON_LIMIT_REACHED
+    handler: (request, response, next, options) => {
+        if (request.rateLimit.used === request.rateLimit.limit + 1) {
+            console.log(`Speed limit reached for IP: ${req.ip} at ${new Date().toISOString()}`);
+        }
+        response.status(options.statusCode).send(options.message)
+    },
 });
 
 const generalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 500,
+    max: 5000,
     standardHeaders: true,
     legacyHeaders: false,
     keyGenerator: (req) => req.ip,
-    onLimitReached: (req, res, options) => {
-        console.log(`Rate limit reached for IP: ${req.ip} at ${new Date().toISOString()}`);
-    }
+    // onLimitReached was removed
+    handler: (request, response, next, options) => {
+        if (request.rateLimit.used === request.rateLimit.limit + 1) {
+            console.log(`Rate limit reached for IP: ${req.ip} at ${new Date().toISOString()}`);
+        }
+        response.status(options.statusCode).send(options.message)
+    },
 });
 
 router.use(speedLimiter);

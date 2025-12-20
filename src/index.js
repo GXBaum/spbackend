@@ -30,14 +30,23 @@ async function startServer() {
         sendNotificationToUser(1, "Server Started", testMessage, {"channel_id": CHANNEL_NAMES.CHANNEL_OTHER})
           .then(() => console.log("Test notification sent"))
           .catch((err) => console.error("Test notification error:", err));
+
+          /*const users = userRepo.getUsersWithEnabledNotifications();
+          users.forEach((user) => {
+              sendNotificationToUser(user.id, `Irregulärer Vertretungsplan erkannt`, "Ersatzraumplan manuell prüfen",
+                  {
+                      channel_id: channelNames.CHANNEL_VP_UPDATES
+                  })
+          })*/
       }
 
       // Schedule periodic updates with error handling
       try {
-        const { job, vpJob } = scheduleUpdates();
+        const { job, vpJob, englishRoomJobHardCodedTuesday, englishRoomJobHardCodedWednesday, englishRoomJobHardCodedThursday } = scheduleUpdates();
 
-        console.log('Update job scheduled:', job);
-        console.log('VP job scheduled:', vpJob);
+        console.log("Update job scheduled: ", job);
+        console.log("VP job scheduled: ", vpJob);
+        console.log("englisch jobs scheduled: ", englishRoomJobHardCodedTuesday, englishRoomJobHardCodedWednesday, englishRoomJobHardCodedThursday);
 
       } catch (scheduleError) {
         console.error('Failed to schedule updates:', scheduleError);

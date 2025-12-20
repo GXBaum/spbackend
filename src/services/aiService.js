@@ -23,7 +23,7 @@ export async function aiService(systemPrompt, prompt) {
     }
 
     const completion = await openai.chat.completions.create({
-        models: ["x-ai/grok-4-fast", "openai/gpt-5-nano", "openai/gpt-oss-120b"],
+        models: ["x-ai/grok-4.1-fast", "x-ai/grok-4-fast", "openai/gpt-5-nano", /*"openai/gpt-oss-120b"*/],
         messages: [
             {
                 role: "system",
@@ -34,7 +34,7 @@ export async function aiService(systemPrompt, prompt) {
                 content: prompt
             }
         ],
-        max_tokens: 6000, // TODO: change
+        max_tokens: 10000, // TODO: change
     });
 
     return completion;

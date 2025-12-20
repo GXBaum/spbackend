@@ -43,7 +43,7 @@ export async function vpCheckForDifferences(
 
 
     const systemPrompt = `Du bist ein deutscher Extraktions-Assistent für den Vertretungsplan einer Schule. Oben stehen, falls es welche gibt, besondere Infos. Sei intelligent und suche diese raus. Die 3 Tabellen für fehlende Lehrer, Klassen und Räume sind normal und zählen nicht dazu. Ebenfalls gehören die normalen max. 2 Tabellen für Vertretungen und Ersatzräume ebenfalls nicht dazu. Nur besondere Infos. Folgende Beispiele gehören nicht dazu: "In Arbeit" oder "Vertretungsplan für <Datum>", sowie der Name der Schule. Generell: nur Sachen die wirklich wichtig sind, da Nutzer Benachrichtigt werden. Fehlende Lehrer etc sind irrelevant, nur etwas was nicht immer da steht. Antworte nur damit, mit nichts anderem. Benutz alle normale deutsche Zeichen, also auch ß,ü etc, falls angemessen. Eins ist der normale text, so wie er im Plan steht. schreib auch in summary eine kürzere version, welche ungefähr max. 15 Wörter sein soll. Die Summary kann auch formatiert sein. Wichtige Infos sollten drinne stehen, es sei den der Platz reicht nicht, dann such nach wichtigkeit aus, und gib den rest nur ungefähr an. der normale soll aber original (aber sinnvoll) bleiben.
-    Du erhältst deine vorherigen extrhaierten Infos. Wenn die alten Daten noch korrekt sind, setze es null. Falls es jetzt keine Infos mehr gibt, weil der Vertretungsplan jetzt anders oder neu ist, gibt bei beidem einen leeren String zurück.
+    Du erhältst deine vorherigen extrahierten Infos. Wenn die alten Daten noch korrekt sind, setze es null. Falls es jetzt keine Infos mehr gibt, weil der Vertretungsplan jetzt anders oder neu ist, gibt bei beidem einen leeren String zurück.
     Gib ausschließlich gültiges JSON zurück (kein Text, keine Erklärungen).
     Schema:
     {
@@ -80,10 +80,12 @@ export async function vpCheckForDifferences(
                 users.forEach((user) => {
                     notifier(user.id, `VP Info am ${stringDay === "today" ? "heutigen" : "nächsten"} Schultag`, contentJson.summary,
                         {
-                            channel_id: channelNames.CHANNEL_VP_UPDATES
+                            channel_id: channelNames.CHANNEL_VP_UPDATES,
+                            notification_id: day
                         })
                 })
-                //notifier(1, `VP Info am ${stringDay === "today" ? "heutigen" : "nächsten"} Schultag`, contentJson.summary)
+
+                //notifier(1, `[TEST] VP Info am ${stringDay === "today" ? "heutigen" : "nächsten"} Schultag`, contentJson.summary)
 
             }
         })
@@ -92,85 +94,35 @@ export async function vpCheckForDifferences(
         });
 
 
-    const changedCourses = await processSubstitutions(data, stringDay, vpRepo);
+    const changedCourses = await processSubstitutions(data, stringDay, true, vpRepo);
     console.log("changedCourses ", changedCourses);
-    await notifyUsers(changedCourses, stringDay, data.websiteDate, vpRepo, notifier, deepLinkBuilder, channelNames);
+    await notifyUsers(
+        changedCourses,
+        day,
+        stringDay,
+        data.websiteDate,
+        true,
+        vpRepo,
+        notifier,
+        deepLinkBuilder,
+        channelNames,
+    );
 
 
     // TODO: ... yes. yes, i am ashamed.
-    const changedDifferentRoomsCourses = await processDifferentRooms(data, stringDay, vpRepo);
-    await notifyUsersDifferentRooms(changedDifferentRoomsCourses, stringDay, data.websiteDate, vpRepo, notifier, deepLinkBuilder, channelNames);
+    const changedDifferentRoomsCourses = await processSubstitutions(data, stringDay, false, vpRepo);
+    await notifyUsers(
+        changedDifferentRoomsCourses,
+        day,
+        stringDay,
+        data.websiteDate,
+        false,
+        vpRepo,
+        notifier,
+        deepLinkBuilder,
+        channelNames
+    );
 
-}
-
-export async function processDifferentRooms(data, stringDay, vpRepo) {
-    const siteDate = data.websiteDate;
-    const oldDifferentRooms = vpRepo.listAllDifferentRoomsForDay(stringDay, siteDate) || [];
-    const differentRooms = Array.isArray(data.differentRooms) ? data.differentRooms : [];
-
-    const coursesWithUpdates = new Set();
-
-    // mark deletions
-    for (const oldRow of oldDifferentRooms) {
-        if (isDeletedSubstitution(differentRooms, oldRow, siteDate)) {
-            const deleted = vpRepo.markDifferentRoomAsDeleted({
-                course: oldRow.course,
-                day: stringDay,
-                hour: oldRow.hour ?? null,
-                original: oldRow.original ?? null,
-                replacement: oldRow.replacement ?? null,
-                description: oldRow.description ?? null,
-                vp_date: oldRow.vp_date
-            });
-            if (deleted && oldRow.course) coursesWithUpdates.add(oldRow.course);
-        }
-    }
-
-    // insert new rows
-    for (const row of differentRooms) {
-        if (!isNewSubstitution(oldDifferentRooms, row, siteDate)) continue;
-        vpRepo.insertDifferentRoom({
-            course: row.course,
-            day: stringDay,
-            hour: row.hour ?? null,
-            original: row.original ?? null,
-            replacement: row.replacement ?? null,
-            description: row.description ?? null,
-            vp_date: siteDate
-        });
-        if (row.course) coursesWithUpdates.add(row.course);
-    }
-    console.log("changed different rooms: " + Array.from(coursesWithUpdates));
-
-    return Array.from(coursesWithUpdates);
-}
-
-export async function notifyUsersDifferentRooms(
-    changedCourses,
-    stringDay,
-    websiteDate,
-    vpRepo,
-    notifier,
-    deepLinkBuilder,
-    channelNames
-) {
-    for (const course of changedCourses) {
-        const users = vpRepo.getUsersWithVPCourseName(course);
-        const differentRooms = vpRepo.listDifferentRooms(course, stringDay, websiteDate);
-        if (differentRooms.length === 0) continue;
-
-        const message = formatSubstitutionsMessage(differentRooms);
-        const title = `${course}: Ersatzräume am ${stringDay === "today" ? "heutigen" : "nächsten"} Schultag`;
-        const uri = deepLinkBuilder("vpScreen", {"course": course});
-
-        for (const { user_id } of users) {
-            console.log(`sending to user ${user_id}`);
-            await notifier(user_id, title, message, {
-                deepLink: uri,
-                channel_id: channelNames.CHANNEL_VP_UPDATES
-            });
-        }
-    }
 }
 
 export function isNewSubstitution(oldData, substitution, websiteDate) {
@@ -198,50 +150,82 @@ export function isDeletedSubstitution(newData, oldSubstitution, websiteDate) {
     );
 }
 
-export async function processSubstitutions(data, stringDay, vpRepo) {
+export async function processSubstitutions(data, stringDay, isSubstitution, vpRepo) {
     const siteDate = data.websiteDate;
-    const oldSubstitutions = vpRepo.listAllSubstitutionsForDay(stringDay, siteDate) || [];
-    const substitutions = Array.isArray(data.substitutions) ? data.substitutions : [];
+
+    const oldItems = isSubstitution
+        ? vpRepo.listAllSubstitutionsForDay(stringDay, siteDate) || []
+        : vpRepo.listAllDifferentRoomsForDay(stringDay, siteDate) || [];
+
+    const newItems = isSubstitution
+        ? Array.isArray(data.substitutions) ? data.substitutions : []
+        : Array.isArray(data.differentRooms) ? data.differentRooms : [];
 
     const coursesWithUpdates = new Set();
 
     // TODO: add transactions
-    for (const oldSubstitution of oldSubstitutions) {
-        if (isDeletedSubstitution(substitutions, oldSubstitution, siteDate)) {
-            console.log("DELETING:", JSON.stringify(oldSubstitution));
-            const deleted = vpRepo.markSubstitutionAsDeleted({
-                course: oldSubstitution.course,
-                day: stringDay,
-                hour: oldSubstitution.hour ?? null,
-                original: oldSubstitution.original ?? null,
-                replacement: oldSubstitution.replacement ?? null,
-                description: oldSubstitution.description ?? null,
-                vp_date: oldSubstitution.vp_date
-            });
-            console.log("markSubstitutionAsDeleted returned:", deleted);
-            if (deleted && oldSubstitution.course) coursesWithUpdates.add(oldSubstitution.course);
+    for (const oldItem of oldItems) {
+        if (isDeletedSubstitution(newItems, oldItem, siteDate)) {
+            console.log("DELETING:", JSON.stringify(oldItem));
+
+            let deleted;
+            if (isSubstitution) {
+                deleted = vpRepo.markSubstitutionAsDeleted({
+                    course: oldItem.course,
+                    day: stringDay,
+                    hour: oldItem.hour ?? null,
+                    original: oldItem.original ?? null,
+                    replacement: oldItem.replacement ?? null,
+                    description: oldItem.description ?? null,
+                    vp_date: oldItem.vp_date
+                });
+            } else {
+                deleted = vpRepo.markDifferentRoomAsDeleted({
+                    course: oldItem.course,
+                    day: stringDay,
+                    hour: oldItem.hour ?? null,
+                    original: oldItem.original ?? null,
+                    replacement: oldItem.replacement ?? null,
+                    description: oldItem.description ?? null,
+                    vp_date: oldItem.vp_date
+                });
+            }
+
+            console.log("markAsDeleted returned:", deleted);
+            if (deleted && oldItem.course) coursesWithUpdates.add(oldItem.course);
         }
     }
 
     // TODO: add transactions
     // insert new rows
-    for (const substitution of substitutions) {
-        //console.log(`substitution: ${substitution.hour}, ${substitution.course}`);
-
-        if (!isNewSubstitution(oldSubstitutions, substitution, siteDate)) {
+    for (const row of newItems) {
+        if (!isNewSubstitution(oldItems, row, siteDate)) {
             continue;
         }
 
-        vpRepo.insertSubstitution({
-            course: substitution.course,
-            day: stringDay,
-            hour: substitution.hour ?? null,
-            original: substitution.original ?? null,
-            replacement: substitution.replacement ?? null,
-            description: substitution.description ?? null,
-            vp_date: siteDate
-        });
-        if (substitution.course) coursesWithUpdates.add(substitution.course);
+        if (isSubstitution) {
+            vpRepo.insertSubstitution({
+                course: row.course,
+                day: stringDay,
+                hour: row.hour ?? null,
+                original: row.original ?? null,
+                replacement: row.replacement ?? null,
+                description: row.description ?? null,
+                vp_date: siteDate
+            });
+        } else {
+            vpRepo.insertDifferentRoom({
+                course: row.course,
+                day: stringDay,
+                hour: row.hour ?? null,
+                original: row.original ?? null,
+                replacement: row.replacement ?? null,
+                description: row.description ?? null,
+                vp_date: siteDate
+            });
+        }
+
+        if (row.course) coursesWithUpdates.add(row.course);
     }
     console.log("changed substitutions: " + Array.from(coursesWithUpdates));
     return Array.from(coursesWithUpdates);
@@ -277,8 +261,10 @@ export function formatSubstitutionsMessageCombine(substitutions) {
 
 export async function notifyUsers(
     changedCourses,
+    day,
     stringDay,
     websiteDate,
+    isSubstitution,
     vpRepo,
     notifier,
     deepLinkBuilder,
@@ -286,23 +272,43 @@ export async function notifyUsers(
 ) {
     for (const course of changedCourses) {
         const users = vpRepo.getUsersWithVPCourseName(course);
-        console.log(users);
         console.log(`users: ${JSON.stringify(users)}`);
 
-        const substitutions = vpRepo.listSubstitutions(course, stringDay, websiteDate);
-        if (substitutions.length === 0) continue;
+        const items = isSubstitution
+            ? vpRepo.listSubstitutions(course, stringDay, websiteDate)
+            : vpRepo.listDifferentRooms(course, stringDay, websiteDate);
 
-        const message = formatSubstitutionsMessage(substitutions);
-        const title = `${course}: Vertretung am ${stringDay === "today" ? "heutigen" : "nächsten"} Schultag`;
+        if (items.length === 0) continue;
+
+        const message = formatSubstitutionsMessage(items);
+        const title = `${course}: ${isSubstitution ? "Vertretung" : "Ersatzräume"} am ${stringDay === "today" ? "heutigen" : "nächsten"} Schultag`;
         const uri = deepLinkBuilder("vpScreen", {"course": course});
 
+        const notificationId = items[0].course_id * 100 + day * 10 + (isSubstitution ? 1 : 2)
+
         for (const {user_id} of users) {
+            // TODO UNCOMMENT NOW
+            // FIXME UNCOMMENT NOW
             await notifier(user_id, title, message, {
                 deepLink: uri,
-                channel_id: channelNames.CHANNEL_VP_UPDATES
+                channel_id: channelNames.CHANNEL_VP_UPDATES,
+                notification_id: notificationId
             });
         }
 
+        /*await notifier(1, "[TEST] " + title, message, {
+            deepLink: uri,
+            channel_id: channelNames.CHANNEL_VP_UPDATES,
+            notification_id: notificationId
+        });*/
+
+        /*if (Array.isArray(users) && users.some(u => u.user_id === 1)) {
+            await notifier(1, "[TEST] " + title, message, {
+                deepLink: uri,
+                channel_id: channelNames.CHANNEL_VP_UPDATES,
+                notification_id: notificationId
+            });
+        }*/
 
     }
 }

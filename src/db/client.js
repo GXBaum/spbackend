@@ -71,34 +71,6 @@ CREATE TABLE IF NOT EXISTS vp_raw_history (
   data TEXT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS vp_substitution (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  course TEXT NOT NULL,
-  day TEXT NOT NULL CHECK (day IN ('today','tomorrow')),
-  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
-  hour TEXT,
-  original TEXT,
-  replacement TEXT,
-  description TEXT,
-  vp_date TEXT NOT NULL,
-  is_deleted INTEGER NOT NULL DEFAULT 0 CHECK (is_deleted IN (0,1)),
-  UNIQUE (course, day, hour, original, replacement, description, vp_date)
-);
-
-CREATE TABLE IF NOT EXISTS vp_different_room (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  course TEXT NOT NULL,
-  day TEXT NOT NULL CHECK (day IN ('today','tomorrow')),
-  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
-  hour TEXT,
-  original TEXT,
-  replacement TEXT,
-  description TEXT,
-  vp_date TEXT NOT NULL,
-  is_deleted INTEGER NOT NULL DEFAULT 0 CHECK (is_deleted IN (0,1)),
-  UNIQUE (course, day, hour, original, replacement, description, vp_date)
-);
-
 CREATE TABLE IF NOT EXISTS vp_info (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   fetched_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
@@ -109,6 +81,40 @@ CREATE TABLE IF NOT EXISTS vp_info (
     (data IS NULL AND summary IS NULL) OR
     (data IS NOT NULL AND summary IS NOT NULL)
   )
+);
+
+
+CREATE TABLE IF NOT EXISTS vp_course_lookup (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE
+);
+
+CREATE TABLE IF NOT EXISTS vp_substitution_v2 (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    course_id INTEGER NOT NULL REFERENCES vp_course_lookup(id),
+    day TEXT NOT NULL CHECK (day IN ('today','tomorrow')),
+    hour TEXT,
+    original TEXT,
+    replacement TEXT,
+    description TEXT,
+    vp_date TEXT NOT NULL,
+    is_deleted INTEGER NOT NULL DEFAULT 0 CHECK (is_deleted IN (0,1)),
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+    UNIQUE (course_id, day, hour, original, replacement, description, vp_date)
+);
+
+CREATE TABLE IF NOT EXISTS vp_different_room_v2 (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    course_id INTEGER NOT NULL REFERENCES vp_course_lookup(id),
+    day TEXT NOT NULL CHECK (day IN ('today','tomorrow')),
+    hour TEXT,
+    original TEXT,
+    replacement TEXT,
+    description TEXT,
+    vp_date TEXT NOT NULL,
+    is_deleted INTEGER NOT NULL DEFAULT 0 CHECK (is_deleted IN (0,1)),
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+    UNIQUE (course_id, day, hour, original, replacement, description, vp_date)
 );
 
 CREATE TABLE IF NOT EXISTS sp_course (
