@@ -292,6 +292,16 @@ router.get('/sendNotification4', (req, res) => {
         });
 });
 
+router.get('/sendNotification5', (req, res) => {
+    const uri = buildDeeplink("revealmark/15");
+    sendNotificationToUser(1, `Hallo ${Math.random()*10}`, "schreib mir", { deepLink: uri, channel_id: CHANNEL_NAMES.CHANNEL_VP_UPDATES, "notificationId": 1 })
+        .then(() => res.status(200).json({ success: true, message: 'Notification sent successfully' }))
+        .catch(error => {
+            console.error('Error sending notification:', error);
+            res.status(500).json({ success: false, message: 'Failed to send notification' });
+        });
+});
+
 router.get('/ai', async (req, res) => {
     //const prompt = decodeURIComponent(req.params.prompt);
 
@@ -414,7 +424,11 @@ router.get('/vpSubstitutions', async (req, res) => {
             });
 
         }
-        res.status(200).json({ success: true, substitutions: allSubstitutions });
+        res.status(200).json({
+            success: true,
+            substitutions: allSubstitutions,
+            
+        });
     } catch (error) {
         console.error('Error fetching substitutions:', error);
         res.status(500).json({ success: false, message: 'Failed to fetch substitutions' });

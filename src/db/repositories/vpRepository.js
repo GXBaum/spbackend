@@ -245,10 +245,16 @@ export function createVpRepository(db) {
               AND course = ?
         `),
         getUserVpSelectedCourses: db.prepare(`
-            SELECT course
-            FROM user_vp_course
-            WHERE user_id = ?
-            ORDER BY course
+            SELECT u.course,
+                   CASE
+                       WHEN c.id IS NOT NULL THEN 1
+                                            ELSE 0
+                        END AS is_verified
+
+            FROM user_vp_course u
+            LEFT JOIN vp_course_lookup c ON u.course = c.name
+            WHERE u.user_id = ?
+            ORDER BY u.course
         `),
         getUsersWithVPCourseName: db.prepare(`
             SELECT user_id
@@ -461,7 +467,10 @@ export function createVpRepository(db) {
             return stmts.deleteUserVpSelectedCourse.run(userId, course);
         },
         getUserVpSelectedCourses(userId) {
-            return stmts.getUserVpSelectedCourses.all(userId);
+            return stmts.getUserVpSelectedCourses.all(userId).map( row => ({
+                course: row.course,
+                verified: Boolean(row.is_verified)
+            }));
         },
 
         getUsersWithVPCourseName(course) {

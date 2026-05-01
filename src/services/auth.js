@@ -5,7 +5,7 @@ import {USER_AGENT} from "../config/constants.js";
  * Gets authentication cookies required for accessing the school portal
  * @param {string} username - Required: Username for login
  * @param {string} password - Required: Password for login
- * @param {number} [ сайти schoolId=6078] - Optional: School ID (defaults to 6078)
+ * @param {number} schoolId - Optional: School ID (defaults to 6078)
  * @returns {string} Formatted cookies string containing SPH session and SID cookies
  * @description
  *  This is a two-step authentication process:
