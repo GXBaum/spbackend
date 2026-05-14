@@ -234,6 +234,7 @@ export function createVpRepository(db) {
         `),
 
         // user selected courses
+        // FIXME this needs a max char limit (at the db level), all other user inputs as well. how fucking stupid is it that i have not done that.
         insertUserVpSelectedCourse: db.prepare(`
             INSERT OR IGNORE INTO user_vp_course (user_id, course)
             VALUES (?, ?)

@@ -39,6 +39,17 @@ export async function updateAllSpUserData(
         const loginCookies = await getLoginCookies(spUsername, spPassword, schoolId);
         console.timeEnd('Login');
 
+
+        // TODO FIXME fix the issue then remove this
+        console.log(loginCookies)
+
+        if (!loginCookies.includes("SPH-Sessionpdata") && !loginCookies.includes("sid")) {
+            setTimeout(function() {
+                console.log("TEST NO SPH-Sessionpdata FOUND ------------------------------------------------");
+                sendNotificationToUser(userId, "Potenzieller Schnuller in 1 min.", "Schreib, ob die Erkennung gestimmt hat.")
+            }, 5000)
+        }
+
         const URL = "https://start.schulportal.hessen.de/meinunterricht.php";
         const response = await fetch(URL, {
             method: "GET",
@@ -190,7 +201,7 @@ export async function updateAllSpUserData(
 
 
         try {
-            await spGetMessages(loginCookies);
+            await spGetMessages(loginCookies, userId);
         } catch (error) {
             console.error("Error fetching messages:", error);
         }

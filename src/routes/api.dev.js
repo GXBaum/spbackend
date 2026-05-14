@@ -23,8 +23,11 @@ import {createDefaultAuthRepository} from "../db/repositories/authRepository.js"
 import {createDefaultMarkRepository} from "../db/repositories/marksRepository.js";
 import {createDefaultCourseRepository} from "../db/repositories/courseRepository.js";
 import {createDefaultNotificationsRepository} from "../db/repositories/notificationsRepository.js";
+import {createDefaultMessageRepository} from "../db/repositories/messageRepository.js";
 import {readFileSync} from "fs";
 import path from "path";
+import {getLoginCookies, initMessageAccess} from "../services/auth.js";
+import {reply} from "../services/messagesOldReinkopiert.js";
 
 const vpRepo = createDefaultVpRepository();
 const userRepo = createDefaultUserRepository();
@@ -32,6 +35,7 @@ const authRepo = createDefaultAuthRepository();
 const markRepo = createDefaultMarkRepository();
 const courseRepo = createDefaultCourseRepository();
 const notificationsRepo = createDefaultNotificationsRepository();
+const messageRepo = createDefaultMessageRepository()
 
 const router = express.Router();
 
@@ -188,6 +192,101 @@ router.get('/users/:userId/courses', authenticateToken, authorizeUser, (req, res
         res.status(500).json({ success: false, message: 'Failed to get courses' });
     }
 });
+
+router.get('/users/:userId/courses/:courseId', authenticateToken, authorizeUser, (req, res) => {
+    const { userId, courseId } = req.params;
+    try {
+        const courses = courseRepo.getUserCourseById(courseId)
+        const course = courses [0]
+        const formattedCourse = { courseId: course.id, name: course.name }
+        console.log('Received courses fetch request:', userId);
+        res.status(200).json({ success: true, course: formattedCourse });
+    } catch (error) {
+        console.error('Error getting courses:', error);
+        res.status(500).json({ success: false, message: 'Failed to get courses' });
+    }
+});
+
+
+
+// Chats
+router.get('/users/:userId/chats', authenticateToken, authorizeUser, (req, res) => {
+    const { userId } = req.params
+
+    try {
+        const result = messageRepo.getUserChats(userId).map(chat => ({
+            ...chat,
+            chatId: chat.chat_id,
+            chat_id: undefined,
+            id: undefined
+        }));
+
+        res.status(200).json({ success: true, chats: result})
+    } catch {
+
+    }
+});
+
+// TODO security vulnerability ? userId not used. but chatid is so long should not matter.
+router.get('/users/:userId/chats/:chatId/messages', authenticateToken, authorizeUser, (req, res) => {
+    const { userId, chatId } = req.params
+
+    try {
+        const result = messageRepo.getChatMessages(chatId).map( message => ({
+            ...message,
+            messageId: message.id,
+            id: undefined,
+            chatId: message.chat_id,
+            chat_id: undefined
+        }))
+
+        res.status(200).json({ success: true, messages: result})
+    } catch {
+
+    }
+});
+
+router.post('/users/:userId/chats/:chatId/messages', authenticateToken, authorizeUser, async (req, res) => {
+    const {userId, chatId} = req.params;
+    let {message} = req.body;
+    message = (message || "").trim();
+
+    if (!message) {
+        return res.status(400).json({success: false, message: 'message is required'});
+    }
+
+    try {
+        const user = userRepo.getUserMerged(userId);
+        console.log(user);
+        if (!user) {
+            console.error(`User not found for ID: ${userId}`);
+            return;
+        }
+        const spUsername = user.sp_username;
+        const spPassword = user.sp_password;
+
+
+        const loginCookies = await getLoginCookies(spUsername, spPassword);
+        const aesKeyToken = await initMessageAccess(loginCookies)
+
+        const result = await reply(
+            message,
+            chatId,
+            aesKeyToken,
+            loginCookies
+        )
+
+        console.log(result)
+
+
+        res.status(200).json({success: true});
+    } catch (error) {
+        res.status(500).json({success: false, message: 'Failed to send reply'});
+    }
+});
+
+
+
 
 // VP selected courses (list)
 router.get('/users/:userId/vpSelectedCourses', authenticateToken, authorizeUser, (req, res) => {

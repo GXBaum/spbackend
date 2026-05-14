@@ -16,7 +16,15 @@ export function sendNotification(title, body, registrationToken, options = {}) {
     return admin.messaging().send(message);
 }
 
-// Helper function to send to a user by ID
+/**
+ * Helper function to send to a user by ID
+ * @param {number} userId
+ * @param {string} title
+ * @param {string} body
+ * @param options
+ * @param repo
+ * @returns {Promise<{userId: *, totalTokens: number, sent: number, invalid: *[], failures: *[]}|{userId: *, sent: number, invalid: *[], failures: *[], totalTokens: number}>}
+ */
 export async function sendNotificationToUser(
     userId,
     title,

@@ -1,5 +1,7 @@
 import fetch from "node-fetch";
 import {USER_AGENT} from "../config/constants.js";
+import CryptoJS from "crypto-js";
+import crypto from "crypto";
 
 /**
  * Gets authentication cookies required for accessing the school portal
@@ -88,7 +90,60 @@ async function loginGetSidCookie(cookies) {
     return formattedUpdatedCookies;
 }
 
+
 function formatUpdatedCookies(responseCookies, defaultCookies = "") {
     if (!responseCookies) return defaultCookies;
+
     return responseCookies.split(", ").map(cookie => cookie.split(";")[0]).join("; ");
+}
+
+
+
+export async function initMessageAccess(cookies) {
+
+    // 1. fetch the RSA public key (a youtube video said RSA = "really secure algorithm" and i like that)
+    const rsa = await fetch(
+        "https://start.schulportal.hessen.de/ajax.php?f=rsaPublicKey",
+        {
+            method: "GET",
+            headers: {
+                "Cookie": cookies,
+                "User-Agent": USER_AGENT,
+            }
+        }
+    )
+    const { publickey } = await rsa.json()
+
+    // 2. generate AES Key
+    const generateUUID = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx-xxxxxx3xx'.replace(/[xy]/g, c => {
+        const r = Math.random() * 16 | 0;
+        return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+    });
+
+    // encrypt key with random key (not sure if this is necessary but Portal client does it like this)
+    const aesKeyToken = CryptoJS.AES.encrypt(generateUUID(), generateUUID()).toString();
+
+    // 3. encrypt AES key with public rsa key
+    const encryptedKey = crypto.publicEncrypt({
+        key: publickey,
+        padding: crypto.constants.RSA_PKCS1_PADDING
+    }, Buffer.from(aesKeyToken)).toString("base64");
+
+
+    // 4. send the encrypted AES key to the server
+    const ajax = await fetch(
+        "https://start.schulportal.hessen.de/ajax.php?f=rsaHandshake&s=374",
+        {
+            method: "POST",
+            headers: {
+                "Cookie": cookies,
+                "User-Agent": USER_AGENT,
+            },
+            body: new URLSearchParams({
+                "key": encryptedKey
+            })
+        }
+    )
+
+    return aesKeyToken
 }

@@ -84,6 +84,11 @@ CREATE TABLE IF NOT EXISTS vp_info (
   )
 );
 
+CREATE TABLE IF NOT EXISTS vp_date_lookup (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    vp_date TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
 
 CREATE TABLE IF NOT EXISTS vp_course_lookup (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -157,6 +162,38 @@ CREATE TABLE IF NOT EXISTS sp_course_teacher (
   FOREIGN KEY (course_id) REFERENCES sp_course(id),
   FOREIGN KEY (teacher_id) REFERENCES sp_teacher(id)
 );
+
+
+CREATE TABLE IF NOT EXISTS sp_chat (
+  id TEXT PRIMARY KEY,
+  sender TEXT NOT NULL,
+  betreff TEXT NOT NULL,
+  content TEXT,
+  is_trash INTEGER NOT NULL DEFAULT 0 CHECK (is_trash IN (0,1)),
+  datum TEXT NOT NULL,
+  datumUnix INTEGER NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+
+CREATE TABLE IF NOT EXISTS user_sp_chat (
+  user_id INTEGER NOT NULL,
+  chat_id TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  PRIMARY KEY (user_id, chat_id),
+  FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
+  FOREIGN KEY (chat_id) REFERENCES sp_chat(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS sp_chat_message (
+  id TEXT PRIMARY KEY,
+  chat_id TEXT NOT NULL,
+  sender TEXT NOT NULL,
+  sender_art TEXT NOT NULL,
+  betreff TEXT NOT NULL,
+  content TEXT NOT NULL,
+  FOREIGN KEY (chat_id) REFERENCES sp_chat(id) ON DELETE CASCADE
+);
+
 
 CREATE INDEX IF NOT EXISTS idx_mark_user ON sp_mark(user_id);
 CREATE INDEX IF NOT EXISTS idx_mark_course ON sp_mark(course_id);

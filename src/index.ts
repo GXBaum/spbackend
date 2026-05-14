@@ -42,11 +42,11 @@ async function startServer() {
 
       // Schedule periodic updates with error handling
       try {
-        const { job, vpJob, englishRoomJobHardCodedTuesday, englishRoomJobHardCodedWednesday, englishRoomJobHardCodedThursday } = scheduleUpdates();
+        const { /*spJob,*/ vpJob/*, englishRoomJobHardCodedTuesday, englishRoomJobHardCodedWednesday, englishRoomJobHardCodedThursday*/ } = scheduleUpdates();
 
-        console.log("Update job scheduled: ", job);
+        //console.log("Update job scheduled: ", spJob);
         console.log("VP job scheduled: ", vpJob);
-        console.log("englisch jobs scheduled: ", englishRoomJobHardCodedTuesday, englishRoomJobHardCodedWednesday, englishRoomJobHardCodedThursday);
+        //console.log("englisch jobs scheduled: ", englishRoomJobHardCodedTuesday, englishRoomJobHardCodedWednesday, englishRoomJobHardCodedThursday);
 
       } catch (scheduleError) {
         console.error('Failed to schedule updates:', scheduleError);

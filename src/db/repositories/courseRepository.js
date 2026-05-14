@@ -23,6 +23,11 @@ export function createCourseRepository(db) {
             WHERE uc.user_id = ?
             ORDER BY s.name
         `),
+        getUserCourseById: db.prepare(`
+            SELECT id, name
+            FROM sp_course
+            WHERE id = ?
+        `),
         selectAllCourses: db.prepare(`
             SELECT id, name
             FROM sp_course
@@ -41,6 +46,9 @@ export function createCourseRepository(db) {
         },
         getUserCourseNames(userId) {
             return stmts.getUserCourseNames.all(userId);
+        },
+        getUserCourseById(courseId) {
+            return stmts.getUserCourseById.all(courseId);
         },
         listAllCourses() {
             return stmts.selectAllCourses.all();

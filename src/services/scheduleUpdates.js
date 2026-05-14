@@ -2,7 +2,6 @@ import schedule from "node-schedule";
 import {updateAllSpUserData} from "./updateAllSpUserData.js";
 import {vpCheckForDifferences} from "./vpCheckForDifferences.js";
 import {createDefaultUserRepository} from "../db/repositories/userRepository.js";
-import {sendNotificationToUser} from "./notifications.js";
 
 function chunk(arr, size) {
     if (!Array.isArray(arr) || arr.length === 0) return [];
@@ -15,6 +14,7 @@ function chunk(arr, size) {
 }
 
 export function scheduleUpdates({
+                                    //spCron = "* * * * *", // FIXME TODO CHANGE THIS BACK
                                     spCron = "*/5 * * * *",       // every 5 minutes
                                     vpCron = "*/5 * * * * *",     // every 5 seconds
                                     concurrentUpdates = parseInt(process.env.CONCURRENT_UPDATES || "3", 10),
@@ -27,6 +27,7 @@ export function scheduleUpdates({
 
     console.log(`[INIT] scheduleUpdates spCron=${spCron} vpCron=${vpCron} concurrency=${concurrentUpdates}`);
 
+    /*
     const spJob = scheduler.scheduleJob(spCron, async () => {
         const started = Date.now();
         console.log(`[SP] Job start ${new Date().toISOString()}`);
@@ -60,7 +61,7 @@ export function scheduleUpdates({
         }
 
         console.log(`[SP] Job finished in ${Date.now() - started}ms`);
-    });
+    });*/
 
     const vpJob = scheduler.scheduleJob(vpCron, async () => {
         const t0 = Date.now();
@@ -76,6 +77,7 @@ export function scheduleUpdates({
     });
 
 
+    /*
     const englishHardcodedIds = [1,2]
     const englishRoomJobHardCodedTuesday = scheduler.scheduleJob("25 13 * * 2", async () => {
         englishHardcodedIds.forEach((id) => {
@@ -97,11 +99,12 @@ export function scheduleUpdates({
         console.log("[SP] Manual trigger");
         await spJob.invoke();
     };
+    */
 
     vpJob.runNow = async () => {
         console.log("[VP] Manual trigger");
         await vpJob.invoke();
     };
 
-    return {spJob, vpJob, englishRoomJobHardCodedTuesday, englishRoomJobHardCodedWednesday, englishRoomJobHardCodedThursday};
+    return {/*spJob,*/ vpJob/*, englishRoomJobHardCodedTuesday, englishRoomJobHardCodedWednesday, englishRoomJobHardCodedThursday*/};
 }
