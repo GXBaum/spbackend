@@ -1,93 +1,22 @@
-import {sendNotificationToUser} from './services/notifications.js';
-import express from 'express';
-import {CHANNEL_NAMES, EXPRESS_PORT} from './config/constants.js';
-import {scheduleUpdates} from './services/scheduleUpdates.js';
-import {requestLogger} from "./middleware/request-logger.js";
+import express, {type Application} from "express";
+import v1Routes from "./routes/v1/index.js"
 
-import apiDevRoutes from './routes/api.dev.js';
+const app: Application = express();
+const port = 50001; // TODO: fix back to 5000
 
-import 'dotenv/config';
+app.set("trust proxy", 1)
 
-const app = express();
-app.set('trust proxy', true);
+// Enable URL-encoded form data parsing // brauche ich das?
+app.use(express.urlencoded({extended: true}));
+
+// parse json bodies
 app.use(express.json());
-app.use(requestLogger);
-app.use('/api/dev', apiDevRoutes);
 
-/**
- * Starts the Express server with database initialization and scheduled tasks.
- */
-async function startServer() {
-  let server; // Declare server variable in outer scope for cleanup
 
-  try {
-    // Start the Express server
-    server = app.listen(EXPRESS_PORT, () => {
-      console.log(`Server running on port ${EXPRESS_PORT}`);
+app.use(express.static("src/public")); // TODO: geht nur weil src noch da ist, wird aber nicht in dist kopiert
 
-      if (process.env.SEND_STARTUP_NOTIFICATION === 'true') {
-        const testMessage = new Date().toISOString();
-        sendNotificationToUser(1, "Server Started", testMessage, {"channel_id": CHANNEL_NAMES.CHANNEL_OTHER})
-          .then(() => console.log("Test notification sent"))
-          .catch((err) => console.error("Test notification error:", err));
+app.use("/api/v1", v1Routes);
 
-          /*const users = userRepo.getUsersWithEnabledNotifications();
-          users.forEach((user) => {
-              sendNotificationToUser(user.id, `Irregulärer Vertretungsplan erkannt`, "Ersatzraumplan manuell prüfen",
-                  {
-                      channel_id: channelNames.CHANNEL_VP_UPDATES
-                  })
-          })*/
-      }
-
-      // Schedule periodic updates with error handling
-      try {
-        const { /*spJob,*/ vpJob/*, englishRoomJobHardCodedTuesday, englishRoomJobHardCodedWednesday, englishRoomJobHardCodedThursday*/ } = scheduleUpdates();
-
-        //console.log("Update job scheduled: ", spJob);
-        console.log("VP job scheduled: ", vpJob);
-        //console.log("englisch jobs scheduled: ", englishRoomJobHardCodedTuesday, englishRoomJobHardCodedWednesday, englishRoomJobHardCodedThursday);
-
-      } catch (scheduleError) {
-        console.error('Failed to schedule updates:', scheduleError);
-      }
-    });
-
-    // Handle server errors gracefully
-    server.on('error', (err) => {
-      console.error('Server error:', err);
-      process.exit(1); // Consider more robust recovery in production
-    });
-
-  } catch (error) {
-    console.error('Failed to start server:', error);
-    process.exit(1);
-  }
-
-  // Graceful shutdown on SIGTERM
-  process.on('SIGTERM', async () => {
-    console.log('SIGTERM received, shutting down...');
-
-    if (process.env.SEND_STARTUP_NOTIFICATION === 'true') {
-      const testMessage = new Date().toISOString();
-      sendNotificationToUser(1, "Server shutting down", testMessage, {"channel_id": CHANNEL_NAMES.CHANNEL_OTHER})
-          .then(() => console.log("Test notification sent"))
-          .catch((err) => console.error("Test notification error:", err));
-    }
-
-    if (server) {
-      server.close(() => {
-        console.log('Server closed');
-      });
-    }
-    try {
-      console.log('Database connection closed');
-    } catch (closeError) {
-      console.error('Error closing database:', closeError);
-    }
-    process.exit(0);
-  });
-}
-
-// Start the server
-startServer();
+app.listen(port, () => {
+    console.log(`server listening on http://localhost:${port}`)
+});

@@ -1,28 +1,5 @@
-# Dependencies
 node_modules/
-.npm/
-npm-debug.log*
-
-# Environment variables
-src/.env
-.env.*
-
-# Database
-*.index
-*.sqlite
-*.sqlite3
-
-# IDE - WebStorm
-.idea/*
-!.idea/.gitignore
-
-# Logs
-logs/
-*.log
-
-# macOS
+.idea/
 .DS_Store
-
-# Credentials and sensitive files
-*config.json
-*credentials*
+.env
+/src/generated/prisma
