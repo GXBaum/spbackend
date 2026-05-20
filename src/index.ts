@@ -1,5 +1,6 @@
 import express, {type Application} from "express";
 import v1Routes from "./routes/v1/index.js"
+import {requestLogger} from "./middleware/requestLogger.js";
 
 const app: Application = express();
 const port = 50001; // TODO: fix back to 5000
@@ -13,8 +14,9 @@ app.use(express.urlencoded({extended: true}));
 app.use(express.json());
 
 
-app.use(express.static("src/public")); // TODO: geht nur weil src noch da ist, wird aber nicht in dist kopiert
+app.use(requestLogger);
 
+app.use(express.static("src/public")); // TODO: geht nur weil src noch da ist, wird aber nicht in dist kopiert
 app.use("/api/v1", v1Routes);
 
 app.listen(port, () => {

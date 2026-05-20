@@ -1,0 +1,27 @@
+import type {NextFunction, Request, Response} from "express";
+import jwt from "jsonwebtoken";
+
+export const authenticateToken = (req: Request, res: Response, next: NextFunction) => {
+    const authHeader = req.headers["authorization"];
+    const token = authHeader?.split(" ")[1]
+    if (!token) return res.sendStatus(401)
+
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+        throw new Error("Missing JWT_SECRET env variable") // TODO: should this throw? maybe? i don't know
+    }
+
+    try {
+        const user = jwt.verify(
+            token,
+            secret
+        );
+
+        req.user = user;
+        next();
+    } catch (error) {
+        console.error(error);
+        return res.sendStatus(401);
+    }
+
+}

@@ -163,6 +163,10 @@ export async function scrapeVp(day: Day) {
             }
         })
 
+        if (tokens.length === 0) {
+            continue;
+        }
+
         const message: MulticastMessage = {
             tokens: tokens.map(row => row.token),
             data: {
