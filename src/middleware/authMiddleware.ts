@@ -17,7 +17,13 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
             secret
         );
 
-        req.user = user;
+        if (typeof user == "string" || typeof user.id != "string"){
+            return res.sendStatus(401);
+        }
+
+        console.log(user);
+
+        req.user = user as NonNullable<Request["user"]>;
         next();
     } catch (error) {
         console.error(error);

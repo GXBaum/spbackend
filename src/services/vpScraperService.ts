@@ -134,6 +134,7 @@ export async function scrapeVp(day: Day) {
             }
         })
 
+        // FIXME: doesn't differentiate between substitution and rooms
         const title = `${course}: Vertretung ${day}`
         const body = subs.map(sub =>
             `${sub.hour}: ${sub.original || "—"} → ${sub.replacement || "—"} ${sub.description ? `(${sub.description})` : ""}`
@@ -167,6 +168,7 @@ export async function scrapeVp(day: Day) {
             continue;
         }
 
+        // FIXME: doesn't differentiate between substitution and rooms
         const message: MulticastMessage = {
             tokens: tokens.map(row => row.token),
             data: {
