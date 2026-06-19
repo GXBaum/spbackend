@@ -1,0 +1,115 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                 String                  @id @default(uuid())
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+  spData             UserSpData?
+  vpCourses          UserVpCourse[]
+  notificationTokens UserNotificationToken[]
+  refreshTokens      UserRefreshToken[]
+}
+
+model UserSpData {
+  spUsername String
+  spPassword String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String @id
+}
+
+model UserVpCourse {
+  course    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  @@id([userId, course])
+}
+
+model UserNotificationToken {
+  token     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  @@id([userId, token])
+}
+
+model UserRefreshToken {
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  @@id([userId, token])
+}
+
+enum Day {
+  today
+  tomorrow
+}
+
+enum VpType {
+  substitution
+  differentRoom
+}
+
+model VpCourse {
+  name            String           @id
+  vpSubstitutions VpSubstitution[]
+}
+
+model VpSubstitution {
+  id          Int      @id @default(autoincrement())
+  day         Day
+  hour        String?
+  original    String?
+  replacement String?
+  description String?
+  isDeleted   Boolean  @default(false)
+  VpType      VpType
+  course      VpCourse @relation(fields: [courseName], references: [name], onDelete: Cascade)
+  courseName  String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  targetDate DateTime
+  VpDay VpDay @relation(fields: [targetDate], references: [targetDate], onDelete: Cascade)
+
+  @@unique([day, hour, original, replacement, description, isDeleted, VpType, courseName, targetDate])
+}
+
+model VpDay {
+  targetDate DateTime @id
+
+  websiteDate String
+
+  vpInfos String[] // TODO change this to a seperate entity like substitutions?
+  substitutions VpSubstitution[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

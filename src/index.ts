@@ -3,7 +3,7 @@ import v1Routes from "./routes/v1/index.js"
 import {requestLogger} from "./middleware/requestLogger.js";
 
 const app: Application = express();
-const port = 50001; // TODO: fix back to 5000
+const port = 3000;
 
 app.set("trust proxy", 1)
 

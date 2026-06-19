@@ -13,7 +13,7 @@ function castAsDay(value: any): Day | null {
 }
 
 export const getSubstitutions = async (req: Request, res: Response): Promise<void> => {
-    const { courses, day } = req.query;
+    const { courses, /*day*/ } = req.query;
 
     const whereStatement: Prisma.VpSubstitutionWhereInput = {};
 
@@ -28,18 +28,56 @@ export const getSubstitutions = async (req: Request, res: Response): Promise<voi
         whereStatement.courseName = { in: coursesArray }
     }
 
-
-    const dayCast = castAsDay(day);
+    /*const dayCast = castAsDay(day);
     if (dayCast) {
         whereStatement.day = dayCast
-    }
+    }*/
+
+
+    const databaseDayTest = await prisma.vpDay.findMany({
+        orderBy: {
+            targetDate: "desc"
+        },
+        take: 2
+    });
+    console.log(databaseDayTest);
+    whereStatement.targetDate = { in: databaseDayTest.map(day => day.targetDate) }
+
 
 
     const result = await prisma.vpSubstitution.findMany({
         where: whereStatement
     });
 
-    res.send(result);
+    console.log(result)
+
+    const today = databaseDayTest[1]
+    const tomorrow = databaseDayTest[0]
+
+    const response = {
+        data: {
+            // TODO: infos, fehlende klassen etc fehlt
+
+            today: {
+                targetDate: today?.targetDate,
+                dayString: today?.websiteDate,
+                info: today?.vpInfos,
+                substitutions: result.filter(sub =>
+                    sub.targetDate.getDate() === today?.targetDate.getDate()
+                )
+            },
+            tomorrow: {
+                targetDate: tomorrow?.targetDate,
+                dayString: tomorrow?.websiteDate,
+                info: tomorrow?.vpInfos,
+                substitutions: result.filter(sub =>
+                    sub.targetDate.getDate() === tomorrow?.targetDate.getDate()
+                )
+            }
+        }
+    }
+
+    res.send(response);
 };
 
 

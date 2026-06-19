@@ -4,6 +4,8 @@ import {prisma} from "../db/prisma.js";
 import {Day, VpType} from "../generated/prisma/enums.js";
 import type {MulticastMessage} from "firebase-admin/messaging";
 import {messaging} from "../firebase.js";
+import {parse} from "date-fns";
+import {de} from "date-fns/locale/de";
 
 export async function scrapeVp(day: Day) {
     const dayNumber = day === Day.today ? 1 : 2;
@@ -23,13 +25,23 @@ export async function scrapeVp(day: Day) {
         skipDuplicates: true
     });
 
+    try {
+        await prisma.vpDay.create({
+            data: {
+                targetDate: data.targetDateTest,
+                websiteDate: data.websiteDate
+            }
+        })
+    } catch {
+        console.log("day already created")
+    }
 
 
     const oldSubstitutions = await prisma.vpSubstitution.findMany({
         where: {
             isDeleted: false,
-            day: day,
-            vpDate: data.websiteDate
+            //day: day,
+            targetDate: data.targetDateTest
         }
     });
 
@@ -43,10 +55,10 @@ export async function scrapeVp(day: Day) {
             original: item.original,
             replacement: item.replacement,
             description: item.description,
-            vpDate: data.websiteDate,
             isDeleted: false,
             VpType: VpType.differentRoom,
-            courseName: item.course
+            courseName: item.course,
+            targetDate: data.targetDateTest
         })),
         ...data.substitutions.map(item => ({
             day: day,
@@ -54,10 +66,10 @@ export async function scrapeVp(day: Day) {
             original: item.original,
             replacement: item.replacement,
             description: item.description,
-            vpDate: data.websiteDate,
             isDeleted: false,
             VpType: VpType.substitution,
-            courseName: item.course
+            courseName: item.course,
+            targetDate: data.targetDateTest
         }))
     ];
     await prisma.vpSubstitution.createMany({
@@ -106,7 +118,7 @@ export async function scrapeVp(day: Day) {
     console.log(allSubstitutions.length);
 
     const deleted = findDeleted(oldSubstitutions, allSubstitutions);
-    console.log("GELÖSCHT???????? ", deleted);
+    console.log("GELÖSCHT??? ", deleted);
 
     const deletedRows = await prisma.vpSubstitution.updateManyAndReturn({
         where: {
@@ -130,7 +142,7 @@ export async function scrapeVp(day: Day) {
         const subs = await prisma.vpSubstitution.findMany({
             where: {
                 courseName: course,
-                vpDate: data.websiteDate
+                targetDate: data.targetDateTest
             }
         })
 
@@ -150,7 +162,6 @@ export async function scrapeVp(day: Day) {
         }
         await messaging.send(message);
         */
-
 
         const tokens = await prisma.userNotificationToken.findMany({
             where: {
@@ -178,33 +189,6 @@ export async function scrapeVp(day: Day) {
         }
         await messaging.sendEachForMulticast(message)
     }
-
-    /*const user = await prisma.user.create({
-        data: {}
-    })*/
-
-    /*
-    await prisma.userVpCourse.create({
-        data: {
-            course: "Q3/Q4",
-            userId: user.id
-        }
-    })*/
-
-
-    /*
-    const tokenInsert = await prisma.userNotificationToken.create({
-        data: {
-            token: "token",
-            userId: "8de5d9f5-d037-4b0a-9272-8e7908709880"
-        }
-    })
-
-    console.log(tokenInsert);
-    console.log("tokens");
-    console.log(tokens)
-    */
-
 }
 
 
@@ -225,7 +209,9 @@ interface VpData {
     missingClasses: string[],
     missingRooms: string[],
     differentRooms: VpSubstitution[],
-    substitutions: VpSubstitution[]
+    substitutions: VpSubstitution[],
+
+    targetDateTest: Date
 }
 
 
@@ -234,6 +220,7 @@ export async function scrapeVpData(url: string): Promise<VpData> {
     const timestamp = new Date();
 
     try {
+        // TODO: remove axios again? i think fetch() might be fine. in that case, also remove it from package.json
         const { data } = await axios.get(url)
         const formattedData = data.replace(/>\s*</g, ">\n<");
         const $ = cheerio.load(formattedData);
@@ -357,6 +344,232 @@ export async function scrapeVpData(url: string): Promise<VpData> {
         const websiteDate = cleanText($('h3').eq(1).text().replace('Vertretungsplan für ', ''));
         const details = cleanText($('big').text());
 
+        const formatString = "EEEE, dd. MMM yyyy";
+
+        // all month shorthands are correct except march.
+        // vp uses: Jan, Feb, Mrz, Apr, Mai, Jun, Jul, Aug, Sep, Okt, Nov, Dez
+        const localTime = parse(websiteDate.replace("Mrz", "Mär"), formatString, new Date(), {locale: de});
+        const targetDate = new Date(Date.UTC(localTime.getFullYear(), localTime.getMonth(), localTime.getDate())); // otherwise it would be offset by -2 hours in germany local time and show the wrong date
+        console.log(targetDate);
+
+
+        // TODO: remove this
+        /*
+        const test = "Freitag, 06. Mrz 2026\n" +
+            "Freitag, 13. Mrz 2026\n" +
+            "Freitag, 16. Jan 2026\n" +
+            "Freitag, 20. Mrz 2026\n" +
+            "Freitag, 23. Jan 2026\n" +
+            "Dienstag, 05. Mai 2026\n" +
+            "Dienstag, 24. Feb 2026\n" +
+            "Dienstag, 24. Mrz 2026\n" +
+            "Dienstag, 27. Jan 2026\n" +
+            "Dienstag, 28. Okt 2025\n" +
+            "Donnerstag, 07. Mai 2026\n" +
+            "Mittwoch, 28. Jan 2026\n" +
+            "Mittwoch, 29. Okt 2025\n" +
+            "Montag, 04. Mai 2026\n" +
+            "Montag, 23. Feb 2026\n" +
+            "Montag, 27. Okt 2025\n" +
+            "Donnerstag, 30. Okt 2025\n" +
+            "Dienstag, 11. Nov 2025\n" +
+            "Freitag, 17. Apr 2026\n" +
+            "Freitag, 19. Dez 2025\n" +
+            "Freitag, 31. Okt 2025\n" +
+            "Dienstag, 13. Jan 2026\n" +
+            "Dienstag, 10. Mrz 2026\n" +
+            "Donnerstag, 21. Mai 2026\n" +
+            "Donnerstag, 19. Mrz 2026\n" +
+            "Donnerstag, 26. Mrz 2026\n" +
+            "Freitag, 26. Sep 2025\n" +
+            "Freitag, 14. Nov 2025\n" +
+            "Mittwoch, 12. Nov 2025\n" +
+            "Mittwoch, 22. Okt 2025\n" +
+            "Freitag, 22. Mai 2026\n" +
+            "Mittwoch, 11. Feb 2026\n" +
+            "Mittwoch, 10. Dez 2025\n" +
+            "Mittwoch, 18. Feb 2026\n" +
+            "Mittwoch, 25. Feb 2026\n" +
+            "Mittwoch, 11. Mrz 2026\n" +
+            "Mittwoch, 21. Jan 2026\n" +
+            "Mittwoch, 03. Dez 2025\n" +
+            "Donnerstag, 12. Feb 2026\n" +
+            "Donnerstag, 27. Nov 2025\n" +
+            "Mittwoch, 06. Mai 2026\n" +
+            "Mittwoch, 19. Nov 2025\n" +
+            "Mittwoch, 20. Mai 2026\n" +
+            "Mittwoch, 24. Sep 2025\n" +
+            "Mittwoch, 26. Nov 2025\n" +
+            "Montag, 08. Dez 2025\n" +
+            "Montag, 09. Feb 2026\n" +
+            "Montag, 10. Nov 2025\n" +
+            "Montag, 12. Jan 2026\n" +
+            "Montag, 15. Sep 2025\n" +
+            "Montag, 20. Apr 2026\n" +
+            "Montag, 24. Nov 2025\n" +
+            "Montag, 29. Sep 2025\n" +
+            "Montag, 02. Mrz 2026\n" +
+            "Montag, 27. Apr 2026\n" +
+            "Mittwoch, 15. Apr 2026\n" +
+            "Mittwoch, 22. Apr 2026\n" +
+            "Freitag, 06. Feb 2026\n" +
+            "Freitag, 24. Apr 2026\n" +
+            "Freitag, 28. Nov 2025\n" +
+            "Freitag, 12. Dez 2025\n" +
+            "Freitag, 20. Feb 2026\n" +
+            "Freitag, 05. Dez 2025\n" +
+            "Freitag, 21. Nov 2025\n" +
+            "Mittwoch, 01. Okt 2025\n" +
+            "Mittwoch, 13. Mai 2026\n" +
+            "Mittwoch, 17. Dez 2025\n" +
+            "Donnerstag, 18. Sep 2025\n" +
+            "Donnerstag, 05. Mrz 2026\n" +
+            "Donnerstag, 11. Dez 2025\n" +
+            "Donnerstag, 12. Mrz 2026\n" +
+            "Donnerstag, 18. Dez 2025\n" +
+            "Freitag, 27. Feb 2026\n" +
+            "Mittwoch, 14. Jan 2026\n" +
+            "Mittwoch, 17. Sep 2025\n" +
+            "Montag, 01. Dez 2025\n" +
+            "Montag, 11. Mai 2026\n" +
+            "Mittwoch, 04. Feb 2026\n" +
+            "Donnerstag, 13. Nov 2025\n" +
+            "Donnerstag, 23. Apr 2026\n" +
+            "Donnerstag, 25. Sep 2025\n" +
+            "Donnerstag, 29. Jan 2026\n" +
+            "Donnerstag, 26. Feb 2026\n" +
+            "Donnerstag, 30. Apr 2026\n" +
+            "Donnerstag, 16. Apr 2026\n" +
+            "Donnerstag, 06. Nov 2025\n" +
+            "Montag, 02. Feb 2026\n" +
+            "Montag, 09. Mrz 2026\n" +
+            "Donnerstag, 02. Okt 2025\n" +
+            "Donnerstag, 19. Feb 2026\n" +
+            "Dienstag, 09. Dez 2025\n" +
+            "Dienstag, 14. Apr 2026\n" +
+            "Dienstag, 23. Sep 2025\n" +
+            "Dienstag, 25. Nov 2025\n" +
+            "Donnerstag, 04. Dez 2025\n" +
+            "Montag, 15. Dez 2025\n" +
+            "Donnerstag, 05. Feb 2026\n" +
+            "Donnerstag, 20. Nov 2025\n" +
+            "Dienstag, 02. Dez 2025\n" +
+            "Dienstag, 03. Mrz 2026\n" +
+            "Dienstag, 10. Feb 2026\n" +
+            "Dienstag, 16. Sep 2025\n" +
+            "Dienstag, 18. Nov 2025\n" +
+            "Dienstag, 21. Apr 2026\n" +
+            "Dienstag, 21. Okt 2025\n" +
+            "Dienstag, 28. Apr 2026\n" +
+            "Montag, 13. Apr 2026\n" +
+            "Montag, 17. Nov 2025\n" +
+            "Montag, 22. Sep 2025\n" +
+            "Montag, 18. Mai 2026\n" +
+            "Montag, 20. Okt 2025\n" +
+            "Montag, 03. Nov 2025\n" +
+            "Dienstag, 20. Jan 2026\n" +
+            "Dienstag, 30. Sep 2025\n" +
+            "Mittwoch, 04. Mrz 2026\n" +
+            "Mittwoch, 29. Apr 2026\n" +
+            "Freitag, 13. Feb 2026\n" +
+            "Freitag, 07. Nov 2025\n" +
+            "Freitag, 24. Okt 2025\n" +
+            "Freitag, 08. Mai 2026\n" +
+            "Freitag, 19. Sep 2025\n" +
+            "Dienstag, 04. Nov 2025\n" +
+            "Dienstag, 16. Dez 2025\n" +
+            "Donnerstag, 22. Jan 2026\n" +
+            "Donnerstag, 15. Jan 2026\n" +
+            "Freitag, 12. Sep 2025\n" +
+            "Dienstag, 19. Mai 2026\n" +
+            "Dienstag, 03. Feb 2026\n" +
+            "Montag, 26. Jan 2026\n" +
+            "Dienstag, 12. Mai 2026\n" +
+            "Mittwoch, 05. Nov 2025\n" +
+            "Montag, 19. Jan 2026\n" +
+            "Dienstag, 12. Mai\n" +
+            "Donnerstag, 23. Okt 2025\n" +
+            "Dienstag, 17. Mrz 2026\n" +
+            "Montag, 16. Mrz 2026\n" +
+            "Montag, 23. Mrz 2026\n" +
+            "Freitag, 27. Mrz 2026\n" +
+            "Freitag, 30. Jan 2026\n" +
+            "Mittwoch, 18. Mrz 2026\n" +
+            "Freitag, 04. Apr 2025\n" +
+            "Dienstag, 22. Apr 2025\n" +
+            "Mittwoch, 23. Apr 2025\n" +
+            "Donnerstag, 24. Apr 2025\n" +
+            "Freitag, 25. Apr 2025\n" +
+            "Montag, 28. Apr 2025\n" +
+            "Dienstag, 29. Apr 2025\n" +
+            "Mittwoch, 30. Apr 2025\n" +
+            "Freitag, 02. Mai 2025\n" +
+            "Montag, 05. Mai 2025\n" +
+            "Dienstag, 06. Mai 2025\n" +
+            "Mittwoch, 07. Mai 2025\n" +
+            "Donnerstag, 08. Mai 2025\n" +
+            "Freitag, 09. Mai 2025\n" +
+            "Montag, 12. Mai 2025\n" +
+            "Dienstag, 13. Mai 2025\n" +
+            "Mittwoch, 14. Mai 2025\n" +
+            "Donnerstag, 15. Mai 2025\n" +
+            "Freitag, 16. Mai 2025\n" +
+            "Montag, 19. Mai 2025\n" +
+            "Dienstag, 20. Mai 2025\n" +
+            "Mittwoch, 21. Mai 2025\n" +
+            "Donnerstag, 22. Mai 2025\n" +
+            "Freitag, 23. Mai 2025\n" +
+            "Montag, 26. Mai 2025\n" +
+            "Dienstag, 27. Mai 2025\n" +
+            "Mittwoch, 28. Mai 2025\n" +
+            "Montag, 02. Jun 2025\n" +
+            "Dienstag, 03. Jun 2025\n" +
+            "Mittwoch, 04. Jun 2025\n" +
+            "Donnerstag, 05. Jun 2025\n" +
+            "Freitag, 06. Jun 2025\n" +
+            "Dienstag, 10. Jun 2025\n" +
+            "Mittwoch, 11. Jun 2025\n" +
+            "Donnerstag, 12. Jun 2025\n" +
+            "Freitag, 13. Jun 2025\n" +
+            "Montag, 23. Jun 2025\n" +
+            "Dienstag, 24. Jun 2025\n" +
+            "Mittwoch, 25. Jun 2025\n" +
+            "Donnerstag, 26. Jun 2025\n" +
+            "Freitag, 27. Jun 2025\n" +
+            "Montag, 30. Jun 2025\n" +
+            "Donnerstag, 03. Jul 2025\n" +
+            "Freitag, 04. Jul 2025\n" +
+            "Montag, 18. Aug 2025\n" +
+            "Dienstag, 19. Aug 2025\n" +
+            "Mittwoch, 20. Aug 2025\n" +
+            "Donnerstag, 21. Aug 2025\n" +
+            "Freitag, 22. Aug 2025\n" +
+            "Montag, 25. Aug 2025\n" +
+            "Dienstag, 26. Aug 2025\n" +
+            "Mittwoch, 27. Aug 2025\n" +
+            "Donnerstag, 28. Aug 2025\n" +
+            "Freitag, 29. Aug 2025\n" +
+            "Montag, 08. Sep 2025\n" +
+            "Dienstag, 09. Sep 2025\n" +
+            "Mittwoch, 10. Sep 2025\n" +
+            "Donnerstag, 11. Sep 2025\n" +
+            "Freitag, 12. Sep 2025\n" +
+            "Montag, 15. Sep 2025";
+
+        const array = test.split("\n");
+
+        array.forEach(item => {
+            console.log("---")
+            const formatString = "EEEE, dd. MMM yyyy";
+            console.log(item.replace("Mrz", "Mär"))
+
+            const localTime = parse(item.replace("Mrz", "Mär"), formatString, new Date(), {locale: de});
+            const targetDate = new Date(Date.UTC(localTime.getFullYear(), localTime.getMonth(), localTime.getDate()));
+            console.log(targetDate);
+        })
+        */
+
+
         // Find relevant tables
         const missingTeachersTable = findTableAfterText("fehlende Lehrer:");
         const missingClassesTable = findTableAfterText("fehlende Klassen:");
@@ -375,6 +588,8 @@ export async function scrapeVpData(url: string): Promise<VpData> {
             missingRooms: scrapeTableData(missingRoomsTable),
             differentRooms: scrapeSchedule(differentRoomsTable),
             substitutions: scrapeSchedule(substitutionsTable),
+
+            targetDateTest: targetDate
         }
 
     } catch (error) {
@@ -382,7 +597,3 @@ export async function scrapeVpData(url: string): Promise<VpData> {
         throw error
     }
 }
-
-//scrapeData("/Users/Rafael/Downloads/vp1.html")
-//scrapeData("http://www.kleist-schule.de/vertretungsplan/schueler/aktuelle%20plaene/1/vp.html");
-//scrapeData("http://www.kleist-schule.de/vertretungsplan/schueler/aktuelle%20plaene/2/vp.html");
