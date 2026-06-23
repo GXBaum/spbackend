@@ -83,7 +83,7 @@ model VpCourse {
 
 model VpSubstitution {
   id          Int      @id @default(autoincrement())
-  day         Day
+  //day         Day
   hour        String?
   original    String?
   replacement String?
@@ -97,9 +97,9 @@ model VpSubstitution {
   updatedAt DateTime @updatedAt
 
   targetDate DateTime
-  VpDay VpDay @relation(fields: [targetDate], references: [targetDate], onDelete: Cascade)
+  VpDay      VpDay    @relation(fields: [targetDate], references: [targetDate], onDelete: Cascade)
 
-  @@unique([day, hour, original, replacement, description, isDeleted, VpType, courseName, targetDate])
+  @@unique([hour, original, replacement, description, isDeleted, VpType, courseName, targetDate])
 }
 
 model VpDay {
@@ -107,7 +107,7 @@ model VpDay {
 
   websiteDate String
 
-  vpInfos String[] // TODO change this to a seperate entity like substitutions?
+  vpInfos       String[] // TODO change this to a seperate entity like substitutions?
   substitutions VpSubstitution[]
 
   createdAt DateTime @default(now())

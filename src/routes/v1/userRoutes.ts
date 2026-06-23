@@ -3,6 +3,6 @@ import {postNotificationToken} from "../../controllers/userController.js";
 
 const router = Router();
 
-router.post("/notification-token", postNotificationToken);
+router.post("/notification-token", postNotificationToken); // TODO: sollte das put oder so sein?
 
 export default router;

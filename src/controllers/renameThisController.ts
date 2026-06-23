@@ -5,7 +5,7 @@ export const getEnrolled = async (req: Request, res: Response) => {
     const id = req.user?.id;
     if (!id) return res.sendStatus(401);
 
-    const result = await prisma.userVpCourse.findMany({
+    const enrolled = await prisma.userVpCourse.findMany({
         where: {
             userId: id
         },
@@ -16,9 +16,29 @@ export const getEnrolled = async (req: Request, res: Response) => {
         }
     });
 
-    res.send({result});
+    const verified = await prisma.vpCourse.findMany({
+        where: {
+            name: {
+                in: enrolled.map(course => course.course)
+            }
+        }
+    })
+
+    const verifiedNamesSet = new Set(
+        verified.map(c => c.name)
+    )
+
+    const enrolledWithVerified = enrolled.map( e => ({
+        ...e,
+        verified: verifiedNamesSet.has(e.course)
+    }))
+
+    res.send({
+        courses: enrolledWithVerified
+    });
 }
 
+// TODO: should this be put? yeah
 // TODO: implement
 export const postEnrolled = async (req: Request, res: Response) => {
     const id = req.user?.id;

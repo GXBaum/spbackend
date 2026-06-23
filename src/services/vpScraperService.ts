@@ -50,7 +50,6 @@ export async function scrapeVp(day: Day) {
 
     const allSubstitutions = [
         ...data.differentRooms.map(item => ({
-            day: day,
             hour: item.hour,
             original: item.original,
             replacement: item.replacement,
@@ -61,7 +60,6 @@ export async function scrapeVp(day: Day) {
             targetDate: data.targetDateTest
         })),
         ...data.substitutions.map(item => ({
-            day: day,
             hour: item.hour,
             original: item.original,
             replacement: item.replacement,

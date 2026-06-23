@@ -55,7 +55,7 @@ export const getSubstitutions = async (req: Request, res: Response): Promise<voi
     const tomorrow = databaseDayTest[0]
 
     const response = {
-        data: {
+        substitutions: {
             // TODO: infos, fehlende klassen etc fehlt
 
             today: {
@@ -86,4 +86,24 @@ export const postSubstitutions = async (req: Request, res: Response) => {
     await scrapeVp(Day.tomorrow)
 
     res.send(result);
+}
+
+// TODO: potentially move to a different file
+export const getCourses = async (req: Request, res: Response)=> {
+    const { search } = req.query;
+
+    if (typeof search != "string") return res.sendStatus(400);
+
+    const result = await prisma.vpCourse.findMany({
+        where: {
+            name: {
+                contains: search,
+                mode: "insensitive"
+            }
+        }
+    })
+
+    res.send({
+        courses: result
+    })
 }
