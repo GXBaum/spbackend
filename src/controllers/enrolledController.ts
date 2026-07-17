@@ -10,6 +10,7 @@ export const getEnrolled = async (req: Request, res: Response) => {
             userId: id
         },
         select: {
+            id: true,
             course: true,
             createdAt: true,
             updatedAt: true
@@ -61,17 +62,14 @@ export const deleteEnrolled = async (req: Request, res: Response) => {
     const id = req.user?.id;
     if (!id) return res.sendStatus(401);
 
-    const { course } = req.params;
+    const { courseId } = req.params;
 
-    if (!course) return res.sendStatus(400);
-    if (Array.isArray(course)) return res.sendStatus(400);
+    if (!courseId) return res.sendStatus(400);
+    if (Array.isArray(courseId)) return res.sendStatus(400);
 
     const result = await prisma.userVpCourse.delete({
         where: {
-            userId_course: {
-                userId: id,
-                course: course
-            }
+            id: courseId
         },
         select: {
             course: true,

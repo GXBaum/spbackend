@@ -8,10 +8,12 @@ import spRoutes from "./spRoutes.js";
 const router = Router();
 
 router.use("/vp", vpRoutes);
-router.use("/sp", spRoutes)
+router.use("/sp", authenticateToken, spRoutes)
 
 router.use("/auth", authRoutes);
 router.use("/users/me", authenticateToken, userRoutes)
+
+router.use("/migrations", )
 
 
 export default router;

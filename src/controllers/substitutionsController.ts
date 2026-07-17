@@ -38,7 +38,10 @@ export const getSubstitutions = async (req: Request, res: Response): Promise<voi
         orderBy: {
             targetDate: "desc"
         },
-        take: 2
+        take: 2,
+        include: {
+            infos: true
+        }
     });
     console.log(databaseDayTest);
     whereStatement.targetDate = { in: databaseDayTest.map(day => day.targetDate) }
@@ -48,8 +51,6 @@ export const getSubstitutions = async (req: Request, res: Response): Promise<voi
     const result = await prisma.vpSubstitution.findMany({
         where: whereStatement
     });
-
-    console.log(result)
 
     const today = databaseDayTest[1]
     const tomorrow = databaseDayTest[0]
@@ -61,7 +62,7 @@ export const getSubstitutions = async (req: Request, res: Response): Promise<voi
             today: {
                 targetDate: today?.targetDate,
                 dayString: today?.websiteDate,
-                info: today?.vpInfos,
+                info: today?.infos,
                 substitutions: result.filter(sub =>
                     sub.targetDate.getDate() === today?.targetDate.getDate()
                 )
@@ -69,7 +70,7 @@ export const getSubstitutions = async (req: Request, res: Response): Promise<voi
             tomorrow: {
                 targetDate: tomorrow?.targetDate,
                 dayString: tomorrow?.websiteDate,
-                info: tomorrow?.vpInfos,
+                info: tomorrow?.infos,
                 substitutions: result.filter(sub =>
                     sub.targetDate.getDate() === tomorrow?.targetDate.getDate()
                 )

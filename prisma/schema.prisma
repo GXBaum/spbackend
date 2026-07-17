@@ -24,16 +24,16 @@ model User {
 }
 
 model UserSpData {
-  spUsername String
-  spPassword String
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  spAuthCookie String // TODO: encrypt in db
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId String @id
 }
 
 model UserVpCourse {
+  id        String   @id @default(uuid())
   course    String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -41,7 +41,7 @@ model UserVpCourse {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId String
 
-  @@id([userId, course])
+  @@unique([userId, course])
 }
 
 model UserNotificationToken {
@@ -102,12 +102,24 @@ model VpSubstitution {
   @@unique([hour, original, replacement, description, isDeleted, VpType, courseName, targetDate])
 }
 
+model VpInfo {
+  id Int @id @default(autoincrement())
+
+  text String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  targetDate DateTime
+  VpDay      VpDay    @relation(fields: [targetDate], references: [targetDate], onDelete: Cascade)
+}
+
 model VpDay {
   targetDate DateTime @id
 
   websiteDate String
 
-  vpInfos       String[] // TODO change this to a seperate entity like substitutions?
+  infos         VpInfo[]
   substitutions VpSubstitution[]
 
   createdAt DateTime @default(now())

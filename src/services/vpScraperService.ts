@@ -25,11 +25,40 @@ export async function scrapeVp(day: Day) {
         skipDuplicates: true
     });
 
+    const lastInfo = await prisma.vpInfo.findFirst({
+        where: {
+            targetDate: data.targetDateTest
+        },
+        orderBy: {
+            createdAt: "desc"
+        }
+    });
+    const hasInfoChanged = !lastInfo || lastInfo.text !== data.details
+
+    const updateData: any = {};
+    if (hasInfoChanged) {
+        updateData.infos = {
+            create: {
+                text: data.details
+            }
+        };
+    }
+
+
     try {
-        await prisma.vpDay.create({
-            data: {
+        await prisma.vpDay.upsert({
+            where: {
+                targetDate: data.targetDateTest
+            },
+            update: updateData,
+            create: {
                 targetDate: data.targetDateTest,
-                websiteDate: data.websiteDate
+                websiteDate: data.websiteDate,
+                infos: {
+                    create: {
+                        text: data.details
+                    }
+                }
             }
         })
     } catch {
@@ -340,8 +369,22 @@ export async function scrapeVpData(url: string): Promise<VpData> {
         // Extract key information
         //const websiteDate = "Freitag, 04. Apr 2025"
         const websiteDate = cleanText($('h3').eq(1).text().replace('Vertretungsplan für ', ''));
-        const details = cleanText($('big').text());
 
+
+        let uniqueBlocks: string[] = [];
+
+        $('big').each((index, element) => {
+            const blockText = cleanText($(element).text()).trim();
+
+            // Nur hinzufügen, wenn wir diesen Textblock nicht schon holding haben
+            // und er nicht leer ist
+            if (blockText && !uniqueBlocks.includes(blockText)) {
+                uniqueBlocks.push(blockText);
+            }
+        });
+
+        // Verbindet die einzelnen Blöcke wieder mit Absätzen
+        const details = uniqueBlocks.join('\n\n');
         const formatString = "EEEE, dd. MMM yyyy";
 
         // all month shorthands are correct except march.

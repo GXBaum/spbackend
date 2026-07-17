@@ -1,8 +1,10 @@
 import {Router} from "express";
+import {getTest, postAuthCookie, PostAuthCookieSchema} from "../../controllers/spController.js";
 
 const router = Router();
 
-//router.get("/substitutions", getSubstitutions);
-//router.post("/substitutions", postSubstitutions);
+router.post("/authCookie", postAuthCookie);
+
+router.get("/test", getTest)
 
 export default router;

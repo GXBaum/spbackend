@@ -47,8 +47,8 @@ export const postRegister = async (req: Request, res: Response) => {
     res.send({id: result.id, token, refreshToken});
 };
 
-// TODO: implement
-export const postLogin = async (req: Request, res: Response) => {
+// TODO: implement FIXME
+/*export const postLogin = async (req: Request, res: Response) => {
     const { id, password } = req.body;
 
     // FIXME: doesn't make sense
@@ -62,7 +62,7 @@ export const postLogin = async (req: Request, res: Response) => {
     })
 
     res.send(result);
-}
+}*/
 
 // TODO: implement
 export const postRefresh = async (req: Request, res: Response) => {
