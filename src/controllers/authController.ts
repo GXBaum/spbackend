@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 import {prisma} from "../db/prisma.js";
 import {randomBytes} from "node:crypto";
 
-function signAccessToken(userId: string) {
+export function signAccessToken(userId: string) {
     const secret = process.env.JWT_SECRET;
     if (!secret) {
         throw new Error("Missing JWT_SECRET env variable") // TODO: potentially use zod?
@@ -21,7 +21,7 @@ function signAccessToken(userId: string) {
     )
 }
 
-async function createAndSaveRefreshToken(userId: string) {
+export async function createAndSaveRefreshToken(userId: string) {
     const refreshToken = randomBytes(64).toString("hex");
 
     await prisma.userRefreshToken.create({

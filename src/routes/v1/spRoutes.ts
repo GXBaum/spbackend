@@ -1,5 +1,5 @@
 import {Router} from "express";
-import {getTest, postAuthCookie, PostAuthCookieSchema} from "../../controllers/spController.js";
+import {getTest, postAuthCookie} from "../../controllers/spController.js";
 
 const router = Router();
 

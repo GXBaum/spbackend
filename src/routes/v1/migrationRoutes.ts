@@ -3,6 +3,6 @@ import {getDevV1} from "../../controllers/migrationController.js";
 
 const router = Router();
 
-router.get("/dev-v1", getDevV1);
+router.get("/dev-v1/:userIdOld", getDevV1);
 
 export default router;

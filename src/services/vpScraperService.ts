@@ -42,6 +42,19 @@ export async function scrapeVp(day: Day) {
                 text: data.details
             }
         };
+
+        // TODO: notify for info (code is not tested)
+        const tokens = await prisma.userNotificationToken.findMany()
+
+        const message: MulticastMessage = {
+            tokens: tokens.map(row => row.token),
+            data: {
+                title: `Neue Info für ${day}`,
+                body: data.details
+            }
+        }
+
+        await messaging.sendEachForMulticast(message)
     }
 
 
@@ -174,7 +187,7 @@ export async function scrapeVp(day: Day) {
         })
 
         // FIXME: doesn't differentiate between substitution and rooms
-        const title = `${course}: Vertretung ${day}`
+        const title = `${course}: Vertretung ${day}` // TODO: day is in english
         const body = subs.map(sub =>
             `${sub.hour}: ${sub.original || "—"} → ${sub.replacement || "—"} ${sub.description ? `(${sub.description})` : ""}`
         ).join("\n");
@@ -207,6 +220,7 @@ export async function scrapeVp(day: Day) {
         }
 
         // FIXME: doesn't differentiate between substitution and rooms
+        // TODO: channel id and deeplink missing
         const message: MulticastMessage = {
             tokens: tokens.map(row => row.token),
             data: {

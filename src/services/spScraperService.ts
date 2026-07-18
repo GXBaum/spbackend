@@ -1,8 +1,8 @@
 import {messaging} from "../firebase.js";
 import {prisma} from "../db/prisma.js";
 import type {MulticastMessage} from "firebase-admin/messaging";
-import * as cheerio from "cheerio";
 import type {CheerioAPI} from "cheerio";
+import * as cheerio from "cheerio";
 
 // TODO: just playing around
 export async function scrapeSp(userId: string) {
