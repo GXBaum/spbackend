@@ -11,6 +11,11 @@ export function createNotificationsRepository(db) {
             FROM user_notification_token
             WHERE user_id = ?
         `),
+        selectTokensByUserRaw: db.prepare(`
+            SELECT *
+            FROM user_notification_token
+            WHERE user_id = ?
+        `),
         insertToken: db.prepare(`
             INSERT OR IGNORE INTO user_notification_token (user_id, token)
             VALUES (?, ?)
@@ -25,6 +30,9 @@ export function createNotificationsRepository(db) {
     return {
         getUserNotificationTokens(userId) {
             return stmts.selectTokensByUser.all(userId).map(r => r.token);
+        },
+        getUserNotificationTokensRaw(userId) {
+            return stmts.selectTokensByUserRaw.all(userId);
         },
         addUserNotificationToken(userId, token) {
             stmts.insertToken.run(userId, token);

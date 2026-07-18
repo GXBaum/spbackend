@@ -257,12 +257,18 @@ export function createVpRepository(db) {
             WHERE u.user_id = ?
             ORDER BY u.course
         `),
-        getUsersWithVPCourseName: db.prepare(`
-            SELECT user_id
+        getUserVpSelectedCoursesRaw: db.prepare(`
+            SELECT *
             FROM user_vp_course
-            WHERE course = ?
+            WHERE user_id = ?
+            ORDER BY course
         `),
-
+        getUsersWithVPCourseName: db.prepare(`
+            SELECT u.id AS user_id, u.notifications_enabled
+            FROM user_vp_course uvc
+                     JOIN user u ON u.id = uvc.user_id
+            WHERE uvc.course = ?
+        `),
         insertVpInfo: db.prepare(`
             INSERT INTO vp_info (day, data, summary)
             VALUES (?, ?, ?)
@@ -472,6 +478,9 @@ export function createVpRepository(db) {
                 course: row.course,
                 verified: Boolean(row.is_verified)
             }));
+        },
+        getUserVpSelectedCoursesRaw(userId) {
+            return stmts.getUserVpSelectedCoursesRaw.all(userId);
         },
 
         getUsersWithVPCourseName(course) {

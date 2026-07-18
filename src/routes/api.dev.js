@@ -161,6 +161,54 @@ router.get('/users/:userId/marks', authenticateToken, authorizeUser, (req, res) 
     }
 });
 
+router.get('/migrations/dev-v1/:userId', (req, res) => {
+    const { userId } = req.params;
+    const { refreshToken } = req.query;
+
+    console.log("here:" + userId)
+    console.log(`user ${userId} is migrating...`)
+
+    const tokenVerification = authRepo.getRefreshToken(refreshToken)
+    if (tokenVerification == null) {
+        console.log("user verification failed, no refresh token match")
+
+        return res.sendStatus(403);
+    }
+
+    const tokenUserId = tokenVerification.user_id;
+    console.log("userId from token: " + tokenUserId);
+
+
+    if (userId != tokenUserId) {
+        console.log("user doesnt match")
+        res.sendStatus(403)
+    }
+
+    try {
+        const user = userRepo.getUserById(userId)
+        const courses = vpRepo.getUserVpSelectedCoursesRaw(userId)
+        const notificationTokens = notificationsRepo.getUserNotificationTokensRaw(userId)
+        const refreshTokens = authRepo.getAllRefreshTokensForUser(userId)
+
+        const response = {
+            user: user,
+            courses: courses,
+            notificationTokens: notificationTokens,
+            refreshTokens: refreshTokens
+        }
+
+        userRepo.updateUserNotifications(userId, false) // turn off notifications, as new server will now do that
+
+        console.log(response)
+
+        res.status(200).json({ success: true, data: response });
+    } catch (error) {
+        console.error('Error getting migration data:', error);
+        res.status(500).json({ success: false, message: 'Failed to get migration data' });
+    }
+});
+
+
 // Marks (by course)
 router.get('/users/:userId/:courseId/marks', authenticateToken, authorizeUser, (req, res) => {
     const { userId, courseId } = req.params;
@@ -556,6 +604,9 @@ router.get('/vp/info', (req, res) => {
     console.log("vp info result: " + result);
     res.status(200).json({ success: true, info: result });
 });
+
+
+
 
 
 router.get("/rick", (req, res) => {

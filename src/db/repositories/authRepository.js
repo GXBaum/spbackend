@@ -37,6 +37,11 @@ export function createAuthRepository(db) {
             FROM user_refresh_token
             WHERE token = ?
         `),
+
+
+        getAllRefreshTokensForUser: db.prepare(`
+            SELECT * FROM user_refresh_token WHERE user_id = ?
+        `)
     };
 
     return {
@@ -55,6 +60,10 @@ export function createAuthRepository(db) {
         deleteRefreshToken(token) {
             return stmts.deleteRefreshToken.run(token);
         },
+
+        getAllRefreshTokensForUser(userId) {
+            return stmts.getAllRefreshTokensForUser.all(userId);
+        }
     };
 }
 

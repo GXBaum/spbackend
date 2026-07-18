@@ -271,7 +271,9 @@ export async function notifyUsers(
     channelNames
 ) {
     for (const course of changedCourses) {
-        const users = vpRepo.getUsersWithVPCourseName(course);
+        const users = vpRepo.getUsersWithVPCourseName(course)
+            .filter(user => user.notifications_enabled === 1);
+
         console.log(`users: ${JSON.stringify(users)}`);
 
         const items = isSubstitution
