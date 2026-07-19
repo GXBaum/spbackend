@@ -1,0 +1,566 @@
+{
+  "websiteDate": "Freitag, 04. Apr 2025",
+  "details": "SCHÖNE FERIEN",
+  "missingTeachers": [
+    [
+      "(P) Kp",
+      "3 - 11"
+    ],
+    [
+      "(P) Be",
+      "2 - 3"
+    ],
+    [
+      "(S) Bö",
+      "1 - 2"
+    ],
+    [
+      "(S) BrG",
+      "15' vor UB - 11"
+    ],
+    [
+      "(S) Bz",
+      "1 - 3"
+    ],
+    [
+      "(S) Di",
+      "1 - 3"
+    ],
+    [
+      "(S) Dö",
+      "1 - 3"
+    ],
+    [
+      "(S) Du",
+      "1 - 3"
+    ],
+    [
+      "(S) Ed",
+      "3 - 3"
+    ],
+    [
+      "(S) Fg",
+      "15' vor UB - 3"
+    ],
+    [
+      "(S) Ha",
+      "1 - 2"
+    ],
+    [
+      "(S) Ib",
+      "1 - 2"
+    ],
+    [
+      "(P) Js",
+      "1 - 3"
+    ],
+    [
+      "(S) Kd",
+      "1 - 2"
+    ],
+    [
+      "(S) Kel",
+      "1 - 3"
+    ],
+    [
+      "(S) Kt",
+      "1 - 3"
+    ],
+    [
+      "(K) Le",
+      "15' vor UB - 11"
+    ],
+    [
+      "(S) Lp",
+      "1 - 2"
+    ],
+    [
+      "(S) Ls",
+      "1 - 3"
+    ],
+    [
+      "(S) Ni",
+      "2 - 1. Pause"
+    ],
+    [
+      "(D) Oe",
+      "15' vor UB - 3"
+    ],
+    [
+      "(K) Sa",
+      "15' vor UB - 11"
+    ],
+    [
+      "(D) Si",
+      "15' vor UB - 11"
+    ],
+    [
+      "(-) Sm",
+      "2 - 3"
+    ],
+    [
+      "(S) StS",
+      "1 - 2"
+    ],
+    [
+      "(S) Wz",
+      "1 - 2"
+    ],
+    [
+      "(S) Ak",
+      "1 - 2"
+    ],
+    [
+      "(K) Ks",
+      "15' vor UB - 11"
+    ],
+    [
+      "(D) Sl",
+      "15' vor UB - 11"
+    ],
+    [
+      "(D) Db",
+      "15' vor UB - 11"
+    ],
+    [
+      "(W) Mk",
+      "2 - 3"
+    ],
+    [
+      "(K) Br",
+      "15' vor UB - 11"
+    ],
+    [
+      "(K) Nl",
+      "15' vor UB - 11"
+    ],
+    [
+      "(K) Kh",
+      "15' vor UB - 11"
+    ]
+  ],
+  "missingClasses": [
+    [
+      "(P) E1/E2",
+      "15' vor UB - 11"
+    ],
+    [
+      "(W) G5a",
+      "2 - 3"
+    ],
+    [
+      "(S) Q3/Q4",
+      "1 - 10"
+    ]
+  ],
+  "missingRooms": [
+    [
+      "(S) 045",
+      "1 - 1"
+    ],
+    [
+      "(S) 153 kl",
+      "1 - 3"
+    ],
+    [
+      "(L) 157",
+      "1 - 2"
+    ]
+  ],
+  "differentRooms": [],
+  "substitutions": [
+    {
+      "course": "Int.2",
+      "description": "",
+      "hour": "3",
+      "original": "Ed FöD",
+      "replacement": "Am FöD 222"
+    },
+    {
+      "course": "G5a",
+      "description": "",
+      "hour": "1",
+      "original": "Ks E",
+      "replacement": "Tm E 111"
+    },
+    {
+      "course": "G5e",
+      "description": "in Raum Ph-119 |",
+      "hour": "2",
+      "original": "Sm Mu",
+      "replacement": "Gm Mu Ph-119"
+    },
+    {
+      "course": "G6a",
+      "description": "fällt aus",
+      "hour": "3",
+      "original": "Be E",
+      "replacement": "-----"
+    },
+    {
+      "course": "R7a",
+      "description": "fällt aus",
+      "hour": "3",
+      "original": "Nl E",
+      "replacement": "-----"
+    },
+    {
+      "course": "G7a",
+      "description": "",
+      "hour": "1",
+      "original": "Ls PoWi",
+      "replacement": "Am PoWi 126"
+    },
+    {
+      "course": "G7a",
+      "description": "",
+      "hour": "2",
+      "original": "Ls PoWi",
+      "replacement": "Ba PoWi 126"
+    },
+    {
+      "course": "G7d",
+      "description": "in Raum Ph-119 |",
+      "hour": "1",
+      "original": "Kel Bio",
+      "replacement": "Gm Bio Ph-119"
+    },
+    {
+      "course": "G7d",
+      "description": "",
+      "hour": "2",
+      "original": "Kel Bio",
+      "replacement": "Hm Bio Bio-133"
+    },
+    {
+      "course": "G7e",
+      "description": "",
+      "hour": "1",
+      "original": "Bö M",
+      "replacement": "Hm M 229"
+    },
+    {
+      "course": "R8a",
+      "description": "fällt aus",
+      "hour": "1",
+      "original": "Kh F",
+      "replacement": "-----"
+    },
+    {
+      "course": "R8a",
+      "description": "fällt aus",
+      "hour": "2",
+      "original": "Kh F",
+      "replacement": "-----"
+    },
+    {
+      "course": "R8b",
+      "description": "fällt aus",
+      "hour": "1",
+      "original": "Kh F",
+      "replacement": "-----"
+    },
+    {
+      "course": "R8b",
+      "description": "fällt aus",
+      "hour": "2",
+      "original": "Kh F",
+      "replacement": "-----"
+    },
+    {
+      "course": "G8a",
+      "description": "fällt aus",
+      "hour": "1",
+      "original": "Br Gs",
+      "replacement": "-----"
+    },
+    {
+      "course": "G8a",
+      "description": "fällt aus",
+      "hour": "3",
+      "original": "Br Eth",
+      "replacement": "-----"
+    },
+    {
+      "course": "G8c",
+      "description": "fällt aus",
+      "hour": "3",
+      "original": "Br Eth",
+      "replacement": "-----"
+    },
+    {
+      "course": "G8d",
+      "description": "fällt aus",
+      "hour": "1",
+      "original": "Si D",
+      "replacement": "-----"
+    },
+    {
+      "course": "G8d",
+      "description": "fällt aus",
+      "hour": "2",
+      "original": "Js E",
+      "replacement": "-----"
+    },
+    {
+      "course": "R9a",
+      "description": "fällt aus",
+      "hour": "3",
+      "original": "Db Info",
+      "replacement": "-----"
+    },
+    {
+      "course": "R9a",
+      "description": "fällt aus",
+      "hour": "3",
+      "original": "Sm Mu",
+      "replacement": "-----"
+    },
+    {
+      "course": "R9a",
+      "description": "fällt aus",
+      "hour": "3",
+      "original": "Mk PoWi",
+      "replacement": "-----"
+    },
+    {
+      "course": "R9a",
+      "description": "fällt aus",
+      "hour": "3",
+      "original": "Sa Ital",
+      "replacement": "-----"
+    },
+    {
+      "course": "R9b",
+      "description": "fällt aus",
+      "hour": "3",
+      "original": "Db Info",
+      "replacement": "-----"
+    },
+    {
+      "course": "R9b",
+      "description": "fällt aus",
+      "hour": "3",
+      "original": "Sm Mu",
+      "replacement": "-----"
+    },
+    {
+      "course": "R9b",
+      "description": "fällt aus",
+      "hour": "3",
+      "original": "Mk PoWi",
+      "replacement": "-----"
+    },
+    {
+      "course": "R9b",
+      "description": "fällt aus",
+      "hour": "3",
+      "original": "Sa Ital",
+      "replacement": "-----"
+    },
+    {
+      "course": "G9a",
+      "description": "fällt aus",
+      "hour": "3",
+      "original": "Db Info",
+      "replacement": "-----"
+    },
+    {
+      "course": "G9a",
+      "description": "fällt aus",
+      "hour": "3",
+      "original": "Sm Mu",
+      "replacement": "-----"
+    },
+    {
+      "course": "G9a",
+      "description": "fällt aus",
+      "hour": "3",
+      "original": "Mk PoWi",
+      "replacement": "-----"
+    },
+    {
+      "course": "G9a",
+      "description": "fällt aus",
+      "hour": "3",
+      "original": "Sa Ital",
+      "replacement": "-----"
+    },
+    {
+      "course": "G9b",
+      "description": "fällt aus",
+      "hour": "3",
+      "original": "Db Info",
+      "replacement": "-----"
+    },
+    {
+      "course": "G9b",
+      "description": "fällt aus",
+      "hour": "3",
+      "original": "Sm Mu",
+      "replacement": "-----"
+    },
+    {
+      "course": "G9b",
+      "description": "fällt aus",
+      "hour": "3",
+      "original": "Mk PoWi",
+      "replacement": "-----"
+    },
+    {
+      "course": "G9b",
+      "description": "fällt aus",
+      "hour": "3",
+      "original": "Sa Ital",
+      "replacement": "-----"
+    },
+    {
+      "course": "G9b",
+      "description": "",
+      "hour": "2",
+      "original": "Ni D",
+      "replacement": "Kn D 045"
+    },
+    {
+      "course": "G9c",
+      "description": "fällt aus",
+      "hour": "3",
+      "original": "Db Info",
+      "replacement": "-----"
+    },
+    {
+      "course": "G9c",
+      "description": "fällt aus",
+      "hour": "3",
+      "original": "Sm Mu",
+      "replacement": "-----"
+    },
+    {
+      "course": "G9c",
+      "description": "fällt aus",
+      "hour": "3",
+      "original": "Mk PoWi",
+      "replacement": "-----"
+    },
+    {
+      "course": "G9c",
+      "description": "fällt aus",
+      "hour": "3",
+      "original": "Sa Ital",
+      "replacement": "-----"
+    },
+    {
+      "course": "G9d",
+      "description": "fällt aus",
+      "hour": "3",
+      "original": "Db Info",
+      "replacement": "-----"
+    },
+    {
+      "course": "G9d",
+      "description": "fällt aus",
+      "hour": "3",
+      "original": "Sm Mu",
+      "replacement": "-----"
+    },
+    {
+      "course": "G9d",
+      "description": "fällt aus",
+      "hour": "3",
+      "original": "Mk PoWi",
+      "replacement": "-----"
+    },
+    {
+      "course": "G9d",
+      "description": "fällt aus",
+      "hour": "3",
+      "original": "Sa Ital",
+      "replacement": "-----"
+    },
+    {
+      "course": "G9e",
+      "description": "fällt aus",
+      "hour": "3",
+      "original": "Db Info",
+      "replacement": "-----"
+    },
+    {
+      "course": "G9e",
+      "description": "fällt aus",
+      "hour": "3",
+      "original": "Sm Mu",
+      "replacement": "-----"
+    },
+    {
+      "course": "G9e",
+      "description": "fällt aus",
+      "hour": "3",
+      "original": "Mk PoWi",
+      "replacement": "-----"
+    },
+    {
+      "course": "G9e",
+      "description": "fällt aus",
+      "hour": "3",
+      "original": "Sa Ital",
+      "replacement": "-----"
+    },
+    {
+      "course": "G9e",
+      "description": "fällt aus",
+      "hour": "1",
+      "original": "Kd PoWi",
+      "replacement": "-----"
+    },
+    {
+      "course": "G9e",
+      "description": "fällt aus",
+      "hour": "2",
+      "original": "Kd PoWi",
+      "replacement": "-----"
+    },
+    {
+      "course": "G10a",
+      "description": "in Raum 021 | verlegt auf 2",
+      "hour": "1",
+      "original": "Cd E",
+      "replacement": "?????"
+    },
+    {
+      "course": "G10a",
+      "description": "statt 1",
+      "hour": "2",
+      "original": "Si D",
+      "replacement": "Cd E 206"
+    },
+    {
+      "course": "Q1/Q2",
+      "description": "Auftrag",
+      "hour": "1",
+      "original": "Fg Spa",
+      "replacement": "-----"
+    },
+    {
+      "course": "Q1/Q2",
+      "description": "Auftrag",
+      "hour": "1",
+      "original": "Sa F",
+      "replacement": "-----"
+    },
+    {
+      "course": "Q1/Q2",
+      "description": "Auftrag",
+      "hour": "2",
+      "original": "Fg Spa",
+      "replacement": "-----"
+    },
+    {
+      "course": "Q1/Q2",
+      "description": "Auftrag",
+      "hour": "2",
+      "original": "Sa F",
+      "replacement": "-----"
+    }
+  ],
+  "targetDateTest": "2025-04-04T00:00:00.000Z"
+}

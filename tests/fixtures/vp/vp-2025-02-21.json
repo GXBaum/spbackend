@@ -1,0 +1,644 @@
+{
+  "websiteDate": "Freitag, 21. Feb 2025",
+  "details": "3./4. H9 Bewerbungsseminar AOK in Raum 216- Aufsicht 3./4. Ge\n5./6. R10a Bewerbungsseminar AOK in Raum 216 – Aufsicht 5.Std. Oe / 6.Std. Sw",
+  "missingTeachers": [
+    [
+      "(K) Ah",
+      "15' vor UB - 11"
+    ],
+    [
+      "(P) Bu",
+      "15' vor UB - 11"
+    ],
+    [
+      "(S) Ni",
+      "2 - 11"
+    ],
+    [
+      "(K) Bk",
+      "15' vor UB - 11"
+    ],
+    [
+      "(P) Gl",
+      "15' vor UB - 11"
+    ],
+    [
+      "(U) Gs",
+      "5 - 11"
+    ],
+    [
+      "(U) Ul",
+      "1. Pause - 3"
+    ],
+    [
+      "(P) Yo",
+      "5 - 11"
+    ],
+    [
+      "(K) Am",
+      "15' vor UB - 11"
+    ],
+    [
+      "(P) Js",
+      "15' vor UB - 11"
+    ],
+    [
+      "(P) Kd",
+      "15' vor UB - 11"
+    ],
+    [
+      "(P) Mg",
+      "3 - 6"
+    ],
+    [
+      "(P) Mk",
+      "15' vor UB - 11"
+    ],
+    [
+      "(K) Rb",
+      "15' vor UB - 11"
+    ],
+    [
+      "(K) Se",
+      "15' vor UB - 11"
+    ],
+    [
+      "(K) Kö",
+      "15' vor UB - 11"
+    ],
+    [
+      "(K) Ren",
+      "15' vor UB - 11"
+    ],
+    [
+      "(K) Tm",
+      "15' vor UB - 11"
+    ],
+    [
+      "(K) Br",
+      "15' vor UB - 11"
+    ]
+  ],
+  "missingClasses": [
+    [
+      "(P) G9a",
+      "15' vor UB - 11"
+    ],
+    [
+      "(P) G9b",
+      "15' vor UB - 11"
+    ],
+    [
+      "(P) G9c",
+      "15' vor UB - 11"
+    ],
+    [
+      "(P) G9d",
+      "15' vor UB - 11"
+    ],
+    [
+      "(P) G9e",
+      "15' vor UB - 11"
+    ]
+  ],
+  "missingRooms": [
+    [
+      "(S) 153 kl",
+      "1. Pause - 4"
+    ],
+    [
+      "(U) 156",
+      "3 - 3"
+    ],
+    [
+      "(S) 207",
+      "3 - 4"
+    ],
+    [
+      "(S) 216",
+      "3 - 6"
+    ]
+  ],
+  "differentRooms": [],
+  "substitutions": [
+    {
+      "course": "Int.1",
+      "description": "",
+      "hour": "3",
+      "original": "Am FöD",
+      "replacement": "Oe FöD 225"
+    },
+    {
+      "course": "G5a",
+      "description": "",
+      "hour": "4",
+      "original": "Mg Mu",
+      "replacement": "Go Mu Mu-036"
+    },
+    {
+      "course": "G5a",
+      "description": "",
+      "hour": "6",
+      "original": "Mk Geo",
+      "replacement": "Hf Geo 111"
+    },
+    {
+      "course": "G5b",
+      "description": "",
+      "hour": "4",
+      "original": "Mg Mu",
+      "replacement": "Go Mu Mu-036"
+    },
+    {
+      "course": "F6a",
+      "description": "",
+      "hour": "5",
+      "original": "Mk Geo",
+      "replacement": "Wt Geo 190"
+    },
+    {
+      "course": "F6b",
+      "description": "",
+      "hour": "6",
+      "original": "Tm E",
+      "replacement": "Sm E 191"
+    },
+    {
+      "course": "G6a",
+      "description": "",
+      "hour": "1",
+      "original": "Gl D",
+      "replacement": "Ml D 140"
+    },
+    {
+      "course": "G6a",
+      "description": "",
+      "hour": "2",
+      "original": "Gl D",
+      "replacement": "Oe D 140"
+    },
+    {
+      "course": "G6b",
+      "description": "",
+      "hour": "2",
+      "original": "Se M",
+      "replacement": "Kn M 046"
+    },
+    {
+      "course": "G6c",
+      "description": "",
+      "hour": "3",
+      "original": "Se M",
+      "replacement": "Ml M 139"
+    },
+    {
+      "course": "G6c",
+      "description": "",
+      "hour": "4",
+      "original": "Se M",
+      "replacement": "Yo M 139"
+    },
+    {
+      "course": "G7a",
+      "description": "in Raum 111",
+      "hour": "5",
+      "original": "Kö Bio",
+      "replacement": "Kp Bio 111"
+    },
+    {
+      "course": "G8a",
+      "description": "fällt aus",
+      "hour": "1",
+      "original": "Br Gs",
+      "replacement": "-----"
+    },
+    {
+      "course": "G8a",
+      "description": "",
+      "hour": "3",
+      "original": "Br Eth",
+      "replacement": "Sen Eth 124"
+    },
+    {
+      "course": "G8a",
+      "description": "",
+      "hour": "4",
+      "original": "Br Eth",
+      "replacement": "Co Eth 124"
+    },
+    {
+      "course": "G8c",
+      "description": "",
+      "hour": "3",
+      "original": "Br Eth",
+      "replacement": "Sen Eth 124"
+    },
+    {
+      "course": "G8c",
+      "description": "",
+      "hour": "4",
+      "original": "Br Eth",
+      "replacement": "Co Eth 124"
+    },
+    {
+      "course": "G8d",
+      "description": "",
+      "hour": "2",
+      "original": "Js E",
+      "replacement": "Mg E 237"
+    },
+    {
+      "course": "H9",
+      "description": "verlegt auf 2",
+      "hour": "1",
+      "original": "Bl Ch",
+      "replacement": "?????"
+    },
+    {
+      "course": "H9",
+      "description": "in Raum Ch-116 | statt 1",
+      "hour": "2",
+      "original": "Tm E",
+      "replacement": "Bl Ch Ch-116"
+    },
+    {
+      "course": "H9",
+      "description": "in Raum 216",
+      "hour": "3",
+      "original": "Tm Ku",
+      "replacement": "Ge Ku 216"
+    },
+    {
+      "course": "H9",
+      "description": "in Raum 216",
+      "hour": "4",
+      "original": "Tm Ku",
+      "replacement": "Ge Ku 216"
+    },
+    {
+      "course": "H9",
+      "description": "",
+      "hour": "5",
+      "original": "Tm E",
+      "replacement": "Ki E 231"
+    },
+    {
+      "course": "R10a",
+      "description": "in Raum 216 Bewerbungsworkshop AOK R10a",
+      "hour": "5",
+      "original": "Bk Al",
+      "replacement": "Oe Al 216"
+    },
+    {
+      "course": "R10a",
+      "description": "fällt aus",
+      "hour": "5",
+      "original": "Gl Ital",
+      "replacement": "-----"
+    },
+    {
+      "course": "R10a",
+      "description": "fällt aus",
+      "hour": "5",
+      "original": "Ren Ku",
+      "replacement": "-----"
+    },
+    {
+      "course": "R10a",
+      "description": "in Raum 216 Bewerbungsworkshop AOK R10a",
+      "hour": "6",
+      "original": "Bk Al",
+      "replacement": "Sw Al 216"
+    },
+    {
+      "course": "R10a",
+      "description": "fällt aus",
+      "hour": "6",
+      "original": "Gl Ital",
+      "replacement": "-----"
+    },
+    {
+      "course": "R10a",
+      "description": "fällt aus",
+      "hour": "6",
+      "original": "Ren Ku",
+      "replacement": "-----"
+    },
+    {
+      "course": "R10b",
+      "description": "in Raum 216 Bewerbungsworkshop AOK R10a",
+      "hour": "5",
+      "original": "Bk Al",
+      "replacement": "Oe Al 216"
+    },
+    {
+      "course": "R10b",
+      "description": "fällt aus",
+      "hour": "5",
+      "original": "Gl Ital",
+      "replacement": "-----"
+    },
+    {
+      "course": "R10b",
+      "description": "fällt aus",
+      "hour": "5",
+      "original": "Ren Ku",
+      "replacement": "-----"
+    },
+    {
+      "course": "R10b",
+      "description": "in Raum 216 Bewerbungsworkshop AOK R10a",
+      "hour": "6",
+      "original": "Bk Al",
+      "replacement": "Sw Al 216"
+    },
+    {
+      "course": "R10b",
+      "description": "fällt aus",
+      "hour": "6",
+      "original": "Gl Ital",
+      "replacement": "-----"
+    },
+    {
+      "course": "R10b",
+      "description": "fällt aus",
+      "hour": "6",
+      "original": "Ren Ku",
+      "replacement": "-----"
+    },
+    {
+      "course": "R10b",
+      "description": "Stillbeschäftigung",
+      "hour": "3",
+      "original": "Bk Geo",
+      "replacement": "-----"
+    },
+    {
+      "course": "R10b",
+      "description": "",
+      "hour": "4",
+      "original": "Bk Geo",
+      "replacement": "Sh Geo 129"
+    },
+    {
+      "course": "G10a",
+      "description": "in Raum 216 Bewerbungsworkshop AOK R10a",
+      "hour": "5",
+      "original": "Bk Al",
+      "replacement": "Oe Al 216"
+    },
+    {
+      "course": "G10a",
+      "description": "fällt aus",
+      "hour": "5",
+      "original": "Gl Ital",
+      "replacement": "-----"
+    },
+    {
+      "course": "G10a",
+      "description": "fällt aus",
+      "hour": "5",
+      "original": "Ren Ku",
+      "replacement": "-----"
+    },
+    {
+      "course": "G10a",
+      "description": "in Raum 216 Bewerbungsworkshop AOK R10a",
+      "hour": "6",
+      "original": "Bk Al",
+      "replacement": "Sw Al 216"
+    },
+    {
+      "course": "G10a",
+      "description": "fällt aus",
+      "hour": "6",
+      "original": "Gl Ital",
+      "replacement": "-----"
+    },
+    {
+      "course": "G10a",
+      "description": "fällt aus",
+      "hour": "6",
+      "original": "Ren Ku",
+      "replacement": "-----"
+    },
+    {
+      "course": "G10b",
+      "description": "in Raum 216 Bewerbungsworkshop AOK R10a",
+      "hour": "5",
+      "original": "Bk Al",
+      "replacement": "Oe Al 216"
+    },
+    {
+      "course": "G10b",
+      "description": "fällt aus",
+      "hour": "5",
+      "original": "Gl Ital",
+      "replacement": "-----"
+    },
+    {
+      "course": "G10b",
+      "description": "fällt aus",
+      "hour": "5",
+      "original": "Ren Ku",
+      "replacement": "-----"
+    },
+    {
+      "course": "G10b",
+      "description": "in Raum 216 Bewerbungsworkshop AOK R10a",
+      "hour": "6",
+      "original": "Bk Al",
+      "replacement": "Sw Al 216"
+    },
+    {
+      "course": "G10b",
+      "description": "fällt aus",
+      "hour": "6",
+      "original": "Gl Ital",
+      "replacement": "-----"
+    },
+    {
+      "course": "G10b",
+      "description": "fällt aus",
+      "hour": "6",
+      "original": "Ren Ku",
+      "replacement": "-----"
+    },
+    {
+      "course": "G10c",
+      "description": "in Raum 216 Bewerbungsworkshop AOK R10a",
+      "hour": "5",
+      "original": "Bk Al",
+      "replacement": "Oe Al 216"
+    },
+    {
+      "course": "G10c",
+      "description": "fällt aus",
+      "hour": "5",
+      "original": "Gl Ital",
+      "replacement": "-----"
+    },
+    {
+      "course": "G10c",
+      "description": "fällt aus",
+      "hour": "5",
+      "original": "Ren Ku",
+      "replacement": "-----"
+    },
+    {
+      "course": "G10c",
+      "description": "in Raum 216 Bewerbungsworkshop AOK R10a",
+      "hour": "6",
+      "original": "Bk Al",
+      "replacement": "Sw Al 216"
+    },
+    {
+      "course": "G10c",
+      "description": "fällt aus",
+      "hour": "6",
+      "original": "Gl Ital",
+      "replacement": "-----"
+    },
+    {
+      "course": "G10c",
+      "description": "fällt aus",
+      "hour": "6",
+      "original": "Ren Ku",
+      "replacement": "-----"
+    },
+    {
+      "course": "G10c",
+      "description": "fällt aus",
+      "hour": "1",
+      "original": "Ren Ku",
+      "replacement": "-----"
+    },
+    {
+      "course": "G10c",
+      "description": "fällt aus",
+      "hour": "2",
+      "original": "Ren Ku",
+      "replacement": "-----"
+    },
+    {
+      "course": "G10d",
+      "description": "in Raum 216 Bewerbungsworkshop AOK R10a",
+      "hour": "5",
+      "original": "Bk Al",
+      "replacement": "Oe Al 216"
+    },
+    {
+      "course": "G10d",
+      "description": "fällt aus",
+      "hour": "5",
+      "original": "Gl Ital",
+      "replacement": "-----"
+    },
+    {
+      "course": "G10d",
+      "description": "fällt aus",
+      "hour": "5",
+      "original": "Ren Ku",
+      "replacement": "-----"
+    },
+    {
+      "course": "G10d",
+      "description": "in Raum 216 Bewerbungsworkshop AOK R10a",
+      "hour": "6",
+      "original": "Bk Al",
+      "replacement": "Sw Al 216"
+    },
+    {
+      "course": "G10d",
+      "description": "fällt aus",
+      "hour": "6",
+      "original": "Gl Ital",
+      "replacement": "-----"
+    },
+    {
+      "course": "G10d",
+      "description": "fällt aus",
+      "hour": "6",
+      "original": "Ren Ku",
+      "replacement": "-----"
+    },
+    {
+      "course": "G10e",
+      "description": "in Raum 216 Bewerbungsworkshop AOK R10a",
+      "hour": "5",
+      "original": "Bk Al",
+      "replacement": "Oe Al 216"
+    },
+    {
+      "course": "G10e",
+      "description": "fällt aus",
+      "hour": "5",
+      "original": "Gl Ital",
+      "replacement": "-----"
+    },
+    {
+      "course": "G10e",
+      "description": "fällt aus",
+      "hour": "5",
+      "original": "Ren Ku",
+      "replacement": "-----"
+    },
+    {
+      "course": "G10e",
+      "description": "in Raum 216 Bewerbungsworkshop AOK R10a",
+      "hour": "6",
+      "original": "Bk Al",
+      "replacement": "Sw Al 216"
+    },
+    {
+      "course": "G10e",
+      "description": "fällt aus",
+      "hour": "6",
+      "original": "Gl Ital",
+      "replacement": "-----"
+    },
+    {
+      "course": "G10e",
+      "description": "fällt aus",
+      "hour": "6",
+      "original": "Ren Ku",
+      "replacement": "-----"
+    },
+    {
+      "course": "E1/E2",
+      "description": "Auftrag",
+      "hour": "3",
+      "original": "Kö D",
+      "replacement": "-----"
+    },
+    {
+      "course": "E1/E2",
+      "description": "Auftrag",
+      "hour": "4",
+      "original": "Kö D",
+      "replacement": "-----"
+    },
+    {
+      "course": "Q1/Q2",
+      "description": "Auftrag",
+      "hour": "9",
+      "original": "Yo Ch",
+      "replacement": "-----"
+    },
+    {
+      "course": "Q3/Q4",
+      "description": "Auftrag",
+      "hour": "5",
+      "original": "Gs Gs",
+      "replacement": "-----"
+    },
+    {
+      "course": "Q3/Q4",
+      "description": "Auftrag",
+      "hour": "6",
+      "original": "Gs Gs",
+      "replacement": "-----"
+    }
+  ],
+  "targetDateTest": "2025-02-21T00:00:00.000Z"
+}

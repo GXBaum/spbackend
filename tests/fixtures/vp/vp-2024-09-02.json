@@ -1,0 +1,117 @@
+{
+  "websiteDate": "Montag, 02. Sep 2024",
+  "details": "",
+  "missingTeachers": [
+    [
+      "(S) EM",
+      "15' vor UB - 11"
+    ],
+    [
+      "(S) Ge",
+      "15' vor UB - 11"
+    ],
+    [
+      "(S) Gi",
+      "15' vor UB - 11"
+    ],
+    [
+      "(D) Gr",
+      "15' vor UB - 11"
+    ],
+    [
+      "(L) Hi",
+      "8 - 11"
+    ],
+    [
+      "(S) My",
+      "15' vor UB - 11"
+    ],
+    [
+      "(S) RoK",
+      "15' vor UB - 11"
+    ],
+    [
+      "(S) Ur",
+      "15' vor UB - 11"
+    ],
+    [
+      "(L) Fr",
+      "2. Pause - 11"
+    ],
+    [
+      "(D) Rü",
+      "15' vor UB - 11"
+    ],
+    [
+      "(S) Hk",
+      "15' vor UB - 11"
+    ],
+    [
+      "(D) Co",
+      "15' vor UB - 11"
+    ],
+    [
+      "(K) Mi",
+      "15' vor UB - 11"
+    ],
+    [
+      "(D) Ls",
+      "15' vor UB - 11"
+    ],
+    [
+      "(K) Mc",
+      "15' vor UB - 11"
+    ],
+    [
+      "(K) Ld",
+      "15' vor UB - 11"
+    ]
+  ],
+  "missingClasses": [],
+  "missingRooms": [
+    [
+      "(S) Ph-117",
+      "1 - 1"
+    ],
+    [
+      "(S) Ph-122",
+      "1 - 1"
+    ],
+    [
+      "(S) WiesB1",
+      "5 - 6"
+    ]
+  ],
+  "differentRooms": [
+    {
+      "course": "G5d",
+      "description": "in Raum Sp-3",
+      "hour": "5",
+      "original": "Ah Sp",
+      "replacement": "Ah Sp Sp-3"
+    },
+    {
+      "course": "G5d",
+      "description": "in Raum Sp-3",
+      "hour": "6",
+      "original": "Ah Sp",
+      "replacement": "Ah Sp Sp-3"
+    },
+    {
+      "course": "Q1/Q2",
+      "description": "in Raum Ph-122",
+      "hour": "1",
+      "original": "Kn Ph",
+      "replacement": "Kn Ph Ph-122"
+    },
+    {
+      "course": "Q3/Q4",
+      "description": "in Raum Ph-117",
+      "hour": "1",
+      "original": "Ju Ph",
+      "replacement": "Ju Ph Ph-117"
+    }
+  ],
+  "substitutions": [],
+  "targetDateTest": "2024-09-02T00:00:00.000Z"
+}
