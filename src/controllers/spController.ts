@@ -1,6 +1,6 @@
 import type {Request, Response} from "express";
 import {prisma} from "../db/prisma.js";
-import {scrapeSp} from "../services/spScraperService.js";
+import {scrapeSp, scrapeSpCourse} from "../services/spScraperService.js";
 import * as z from "zod";
 
 const cookieSchema = z.object({
@@ -53,7 +53,7 @@ export const postAuthCookie = async (req: Request, res: Response) => {
         update: {
             spAuthCookie: formattedCookie
         }
-    })
+    });
 
     res.sendStatus(201);
 }
@@ -62,7 +62,64 @@ export const getTest = async (req: Request, res: Response) => {
     const id = req.user?.id;
     if (!id) return res.sendStatus(401);
 
+
+
     await scrapeSp(id)
 
+
+
     return res.sendStatus(200)
+}
+
+export const getCourses = async (req: Request, res: Response) => {
+    const id = req.user?.id;
+    if (!id) return res.sendStatus(401);
+
+    const result = await prisma.userSpCache.findFirst({
+        where: {
+            userId: id
+        },
+        select: {
+            coursesEncryptedJson: true
+        }
+    })
+
+
+    return res.send({
+        courses: result?.coursesEncryptedJson ?? ""
+    })
+}
+
+
+export const GetCourseMarksSchema = z.object({
+    params: z.object({
+        courseId: z.string()
+    })
+})
+
+export const getCourseMarks = async (req: Request, res: Response) => {
+    const id = req.user?.id;
+    if (!id) return res.sendStatus(401);
+
+    console.log(`after id: ${id}`)
+
+    const request = await GetCourseMarksSchema.safeParseAsync(req)
+    if (!request.success) return res.sendStatus(400)
+    const requestData = request.data
+
+    console.log(requestData)
+
+    const result = await scrapeSpCourse(id, Number(requestData.params.courseId), 2)
+
+    res.send({
+        marks: result
+    })
+}
+
+
+export const getChats = (req: Request, res: Response) => {
+    const id = req.user?.id;
+    if (!id) return res.sendStatus(401);
+
+    return ""
 }

@@ -36,6 +36,41 @@ export async function scrapeVp(day: Day) {
     const url = `https://www.kleist-schule.de/vertretungsplan/schueler/aktuelle%20plaene/${dayNumber}/vp.html`;
     const data = await scrapeVpData(url);
 
+    const oldData = await prisma.vpRawLog.findFirst({
+        where: {
+            day: day,
+        },
+        orderBy: {
+            createdAt: "desc"
+        }
+    });
+
+    if (data.rawPage === oldData?.data) {
+        console.log(`no changes for ${day}`);
+        return
+    }
+    console.log(`changes for ${day}`);
+
+    // TODO: Yes — there are real miss cases in this setup. The biggest one is:
+    //
+    // • You write vpRawLog before finishing DB update + notifications.
+    // If anything fails after that (Firebase error, DB error, process crash), the next run sees “same HTML” and returns early, so that update is never retried and users can miss the notification.
+    //
+    // There’s also a logic gap for course notifications:
+    //
+    // • updatedCourses is built only from newSubstitutions.
+    // If a course only has removals (no new rows), that course won’t be in updatedCourses, so subscribers won’t get notified about that change.
+    //
+    // So: yes, updates can be missed for notifications in the current flow.
+
+    await prisma.vpRawLog.create({
+        data: {
+            data: data.rawPage,
+            day: day
+        }
+    });
+
+
     const allCourseNames = [...data.differentRooms, ...data.substitutions].map(item => ({
         name: item.course
     }));

@@ -21,15 +21,24 @@ model User {
   vpCourses          UserVpCourse[]
   notificationTokens UserNotificationToken[]
   refreshTokens      UserRefreshToken[]
+
+  userSpCaches UserSpCache?
 }
 
 model UserSpData {
-  spAuthCookie String // TODO: encrypt in db
+  spAuthCookie String? // TODO: encrypt in db
+  publicKey    String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId String @id
+}
+
+model UserSpCache {
+  coursesEncryptedJson String? // TODO: encrypt in db
+  user                 User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId               String  @id
 }
 
 model UserVpCourse {
@@ -69,6 +78,14 @@ model UserRefreshToken {
 enum Day {
   today
   tomorrow
+}
+
+model VpRawLog {
+  id        Int      @id @default(autoincrement())
+  day       Day
+  data      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 enum VpType {

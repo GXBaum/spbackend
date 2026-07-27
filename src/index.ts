@@ -31,7 +31,7 @@ app.listen(port, () => {
             console.log("Scraped today");
 
             await scrapeVp(Day.tomorrow);
-            console.log("tomorrow today");
+            console.log("Scraped tomorrow");
         } catch {
             console.log("scrape failed");
         }

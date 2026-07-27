@@ -34,7 +34,7 @@ export const getSubstitutions = async (req: Request, res: Response): Promise<voi
     }*/
 
 
-    const databaseDayTest = await prisma.vpDay.findMany({
+    const days = await prisma.vpDay.findMany({
         orderBy: {
             targetDate: "desc"
         },
@@ -43,42 +43,46 @@ export const getSubstitutions = async (req: Request, res: Response): Promise<voi
             infos: true
         }
     });
-    console.log(databaseDayTest);
-    whereStatement.targetDate = { in: databaseDayTest.map(day => day.targetDate) }
+    console.log(days);
 
-
+    whereStatement.targetDate = { in: days.map(day => day.targetDate) }
 
     const result = await prisma.vpSubstitution.findMany({
         where: whereStatement
     });
 
-    const today = databaseDayTest[1]
-    const tomorrow = databaseDayTest[0]
+    const dayEntries = [
+        { key: "today", day: days[1] },
+        { key: "tomorrow", day: days[0] }
+    ]
 
-    const response = {
-        substitutions: {
-            // TODO: infos, fehlende klassen etc fehlt
+    const substitutions: { [day: string]: any } = {};
 
-            today: {
-                targetDate: today?.targetDate,
-                dayString: today?.websiteDate,
-                info: today?.infos,
-                substitutions: result.filter(sub =>
-                    sub.targetDate.getDate() === today?.targetDate.getDate()
-                )
-            },
-            tomorrow: {
-                targetDate: tomorrow?.targetDate,
-                dayString: tomorrow?.websiteDate,
-                info: tomorrow?.infos,
-                substitutions: result.filter(sub =>
-                    sub.targetDate.getDate() === tomorrow?.targetDate.getDate()
-                )
-            }
+    for (const { key, day } of dayEntries) {
+        if (!day) continue;
+
+        substitutions[key] = {
+            targetDate: day.targetDate,
+            dayString: day.websiteDate,
+            info: day.infos,
+            substitutions: result.filter(sub =>
+                sub.targetDate.getDate() === day.targetDate.getDate()
+            )
+
+            // TODO: One remaining bug to consider
+            // You are still using:
+            // sub.targetDate.getDate() === day.targetDate.getDate()
+            // That compares only the day of the month, not the full date.
+            // If the same number appears in different months, it can match incorrectly.
+            // Safer version:
+            // sub.targetDate.getTime() === day.targetDate.getTime()
+            // Since targetDate comes from the DB and should be the exact same date for those rows, this is the better comparison.
         }
     }
 
-    res.send(response);
+    res.send({
+        substitutions
+    });
 };
 
 
