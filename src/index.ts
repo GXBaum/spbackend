@@ -18,7 +18,11 @@ app.use(express.json());
 
 app.use(requestLogger);
 
-app.use(express.static("src/public")); // TODO: geht nur weil src noch da ist, wird aber nicht in dist kopiert
+// TODO: bisschen goofy, im build script ist einfach cp vom ordner. vielleicht sollte das lieber in einem anderen repo sein
+app.use(express.static("dist/public", {
+    extensions: ["html"] // accept path without .html
+}));
+
 app.use("/v1", v1Routes);
 
 app.listen(port, () => {
