@@ -88,6 +88,8 @@ export const getDevV1 = async (req: Request, res: Response) => {
     }
     const data = parsedData.data.data
 
+    console.log(data);
+
 
     const user = await prisma.user.create({
         data: {
@@ -120,7 +122,9 @@ export const getDevV1 = async (req: Request, res: Response) => {
                 }
             }
         }
-    })
+    });
+
+    console.log(`${userIdOld}: ${user}`);
 
     const token = signAccessToken(user.id);
 

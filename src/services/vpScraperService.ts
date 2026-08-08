@@ -3,72 +3,25 @@ import {prisma} from "../db/prisma.js";
 import {Day, VpType} from "../generated/prisma/enums.js";
 import type {MulticastMessage} from "firebase-admin/messaging";
 import {messaging} from "../firebase.js";
-import {parseVpHtml, type VpData} from "./vpScraperParser.js";
-import type {VpSubstitution} from "../generated/prisma/client.js";
-
-interface substitutionForSetKey {
-    courseName: string,
-    hour: string | null,
-    original: string | null,
-    replacement: string | null,
-    description: string | null
-}
-
-function generateSetKey(sub: substitutionForSetKey) {
-    return `${sub.courseName} ~~~~~~~~|o|~~HELP~~~~ ${sub.hour ?? ""} | ${sub.original ?? ""} | ${sub.replacement ?? ""} | ${sub.description ?? ""}`
-}
-
-function findDeletedSubstitutions(oldSubs: VpSubstitution[], newSubs: substitutionForSetKey[]): VpSubstitution[] {
-    const newSubsSet = new Set(newSubs.map(sub => (generateSetKey(sub))));
-
-    return oldSubs.filter(sub => !newSubsSet.has(generateSetKey(sub)))
-}
-
-// TODO: maybe replace with prisma .createManyAndReturn instead of this?
-function findNewSubstitutions(oldSubs: VpSubstitution[], newSubs: substitutionForSetKey[]): substitutionForSetKey[] {
-    const oldSubsSet = new Set(oldSubs.map(sub => (generateSetKey(sub))));
-
-    return newSubs.filter(sub => !oldSubsSet.has(generateSetKey(sub)))
-}
+import {parseVpHtml} from "./vpScraperParser.js";
+import {Prisma, type VpSubstitution} from "../generated/prisma/client.js";
+import {buildDeepLink, CHANNEL_NAMES} from "./DeepLinkBuilder.js";
+import {relativeDateFormatter} from "./DateFormatter.js";
 
 export async function scrapeVp(day: Day) {
     const dayNumber = day === Day.today ? 1 : 2;
     const url = `https://www.kleist-schule.de/vertretungsplan/schueler/aktuelle%20plaene/${dayNumber}/vp.html`;
-    const data = await scrapeVpData(url);
 
-    const oldData = await prisma.vpRawLog.findFirst({
-        where: {
-            day: day,
-        },
-        orderBy: {
-            createdAt: "desc"
-        }
-    });
+    const html = await fetchHtml(url);
 
-    if (data.rawPage === oldData?.data) {
+    // FIXME UNCOMMENT
+    if (!(await hasVpChanged(day, html))) {
         console.log(`no changes for ${day}`);
-        return
+        return;
     }
     console.log(`changes for ${day}`);
 
-    // TODO: Yes — there are real miss cases in this setup. The biggest one is:
-    //
-    // • You write vpRawLog before finishing DB update + notifications.
-    // If anything fails after that (Firebase error, DB error, process crash), the next run sees “same HTML” and returns early, so that update is never retried and users can miss the notification.
-    //
-    // There’s also a logic gap for course notifications:
-    //
-    // • updatedCourses is built only from newSubstitutions.
-    // If a course only has removals (no new rows), that course won’t be in updatedCourses, so subscribers won’t get notified about that change.
-    //
-    // So: yes, updates can be missed for notifications in the current flow.
-
-    await prisma.vpRawLog.create({
-        data: {
-            data: data.rawPage,
-            day: day
-        }
-    });
+    const data = parseVpHtml(html);
 
 
     const allCourseNames = [...data.differentRooms, ...data.substitutions].map(item => ({
@@ -90,7 +43,7 @@ export async function scrapeVp(day: Day) {
     });
     const hasInfoChanged = !lastInfo || lastInfo.text !== data.details;
 
-    const updateData: any = {};
+    const updateData: Prisma.VpDayUpdateInput = {};
     if (hasInfoChanged) {
         updateData.infos = {
             create: {
@@ -98,39 +51,26 @@ export async function scrapeVp(day: Day) {
             }
         };
 
-        // TODO: notify for info (code is not tested)
-        const tokens = await prisma.userNotificationToken.findMany();
-
-        const message: MulticastMessage = {
-            tokens: tokens.map(row => row.token),
-            data: {
-                title: `VP Info für ${day}`,
-                body: data.details
-            }
-        };
-
-        await messaging.sendEachForMulticast(message);
+        if (data.details != "") {
+            await sendInfoNotification(data.details, day, data.targetDateTest)
+        }
     }
 
-    try {
-        await prisma.vpDay.upsert({
-            where: {
-                targetDate: data.targetDateTest
-            },
-            update: updateData,
-            create: {
-                targetDate: data.targetDateTest,
-                websiteDate: data.websiteDate,
-                infos: {
-                    create: {
-                        text: data.details
-                    }
+    await prisma.vpDay.upsert({
+        where: {
+            targetDate: data.targetDateTest
+        },
+        update: updateData,
+        create: {
+            targetDate: data.targetDateTest,
+            websiteDate: data.websiteDate,
+            infos: {
+                create: {
+                    text: data.details
                 }
             }
-        });
-    } catch {
-        console.log("day already created");
-    }
+        }
+    });
 
 
     const oldSubstitutions = await prisma.vpSubstitution.findMany({
@@ -182,6 +122,9 @@ export async function scrapeVp(day: Day) {
                 in: deleted.map(item => item.id)
             }
         },
+        include: {
+            course: true
+        },
         data: {
             isDeleted: true
         }
@@ -189,63 +132,176 @@ export async function scrapeVp(day: Day) {
     console.log(deletedRows);
 
     const newSubstitutions = findNewSubstitutions(oldSubstitutions, allSubstitutions);
-    const updatedCourses = new Set(newSubstitutions.map(sub => (sub.courseName)));
+
+    /*
+    const updatedCourses = new Set([
+        ...newSubstitutions.map(sub => sub.courseName),
+        ...deletedRows.map(sub => sub.course.name)
+    ]);
     console.log(updatedCourses);
+    */
 
-    for (const course of updatedCourses) {
+    // TODO: quick fix to separate substitutions from differentRooms (call that codeduplicationmaxxing)
+    const updatedSubstitutionCourses = new Set([
+        ...newSubstitutions
+            .filter(sub => sub.VpType === VpType.substitution)
+            .map(sub => sub.courseName),
+        ...deletedRows
+            .filter(sub => sub.VpType === VpType.substitution)
+            .map(sub => sub.course.name)
+    ]);
+    console.log(updatedSubstitutionCourses);
+    const updatedDifferentRoomCourses = new Set([
+        ...newSubstitutions
+            .filter(sub => sub.VpType === VpType.differentRoom)
+            .map(sub => sub.courseName),
+        ...deletedRows
+            .filter(sub => sub.VpType === VpType.differentRoom)
+            .map(sub => sub.course.name)
+    ]);
+    console.log(updatedDifferentRoomCourses);
+
+    //for (const course of updatedCourses) {
+    for (const course of updatedSubstitutionCourses) {
         console.log(course);
+        try {
+            await sendCourseNotification(course, VpType.substitution, day, data.targetDateTest);
+        } catch (error) {
+            console.error(`Notification failed for course ${course}: ${error}`);
+        }
+    }
+    for (const course of updatedDifferentRoomCourses) {
+        console.log(course);
+        try {
+            await sendCourseNotification(course, VpType.differentRoom, day, data.targetDateTest);
+        } catch (error) {
+            console.error(`Notification failed for course ${course}: ${error}`);
+        }
+    }
 
-        const subs = await prisma.vpSubstitution.findMany({
-            where: {
-                courseName: course,
-                targetDate: data.targetDateTest
-            }
-        });
 
-        // FIXME: doesn't differentiate between substitution and rooms
-        const title = `${course}: Vertretung ${day}`; // TODO: day is in english
-        const body = subs
-            .map(sub => `${sub.hour}: ${sub.original || "—"} → ${sub.replacement || "—"} ${sub.description ? `(${sub.description})` : ""}`)
-            .join("\n");
+    await prisma.vpRawLog.create({
+        data: {
+            data: html,
+            day: day
+        }
+    });
+}
 
+// seems like an unnecessary function
+export async function fetchHtml(url: string): Promise<string> {
+    const { data } = await axios.get(url)
+    return data
+}
 
-        const tokens = await prisma.userNotificationToken.findMany({
-            where: {
-                user: {
-                    vpCourses: {
-                        some: {
-                            course: course
-                        }
+interface SubstitutionForSetKey {
+    courseName: string;
+    hour: string | null;
+    original: string | null;
+    replacement: string | null;
+    description: string | null;
+    VpType: VpType;
+}
+
+function generateSetKey(sub: SubstitutionForSetKey) {
+    return `${sub.courseName} ~~~~~~~~|o|~~HELP~~~~ ${sub.hour ?? ""} | ${sub.original ?? ""} | ${sub.replacement ?? ""} | ${sub.description ?? ""}`;
+}
+
+function findDeletedSubstitutions(oldSubs: VpSubstitution[], newSubs: SubstitutionForSetKey[]): VpSubstitution[] {
+    const newSubsSet = new Set(newSubs.map(sub => (generateSetKey(sub))));
+
+    return oldSubs.filter(sub => !newSubsSet.has(generateSetKey(sub)));
+}
+
+// TODO: maybe replace with prisma .createManyAndReturn instead of this?
+function findNewSubstitutions(
+    oldSubs: SubstitutionForSetKey[],
+    newSubs: SubstitutionForSetKey[]
+): SubstitutionForSetKey[] {
+    const oldSubsSet = new Set(oldSubs.map(sub => generateSetKey(sub)));
+    return newSubs.filter(sub => !oldSubsSet.has(generateSetKey(sub)));
+}
+
+async function hasVpChanged(day: Day, html: string) {
+    const oldData = await prisma.vpRawLog.findFirst({
+        where: {
+            day: day,
+        },
+        orderBy: {
+            createdAt: "desc"
+        }
+    });
+
+    return html !== oldData?.data;
+}
+
+async function sendCourseNotification(course: string, vpType: VpType, day: Day, targetDate: Date) {
+    const subs = await prisma.vpSubstitution.findMany({
+        where: {
+            courseName: course,
+            targetDate: targetDate,
+            isDeleted: false,
+            VpType: vpType
+        }
+    });
+    // TODO: sends empty notifications if everything is deleted
+
+    const title = `${course}: ${vpType === VpType.substitution ? "Vertretung" : "Ersatzraum"} ${relativeDateFormatter(targetDate)}`;
+
+    const body = subs
+        .map(sub => `${sub.hour}: ${sub.original || "—"} → ${sub.replacement || "—"} ${sub.description ? `(${sub.description})` : ""}`)
+        .join("\n");
+
+    // TODO: lol what is this
+    const notificationId = "vp" + course + day + vpType // FIXME doesn't differentiate between substitution and rooms
+
+    const tokens = await prisma.userNotificationToken.findMany({
+        where: {
+            user: {
+                vpCourses: {
+                    some: {
+                        course: course
                     }
                 }
             }
-        });
-
-        if (tokens.length === 0) {
-            continue;
         }
+    });
 
-        // FIXME: doesn't differentiate between substitution and rooms
-        // TODO: channel id and deeplink missing
-        const message: MulticastMessage = {
-            tokens: tokens.map(row => row.token),
-            data: {
-                title: title,
-                body: body
-            }
-        };
-        await messaging.sendEachForMulticast(message);
+    if (tokens.length === 0) {
+        return;
     }
+
+    // FIXME: doesn't differentiate between substitution and rooms
+    const message: MulticastMessage = {
+        tokens: tokens.map(row => row.token),
+        data: {
+            title: title,
+            body: body,
+            deepLink: buildDeepLink({ path: "vpScreen", queryParams: { course: course } }),
+            id: notificationId,
+            channel_id: CHANNEL_NAMES.CHANNEL_VP_UPDATES, // TODO: improve this
+        }
+    };
+    await messaging.sendEachForMulticast(message);
 }
 
-export async function scrapeVpData(url: string): Promise<VpData> {
-    try {
-        // TODO: remove axios again? i think fetch() might be fine. in that case, also remove it from package.json
-        const { data } = await axios.get(url)
-        return parseVpHtml(data)
+async function sendInfoNotification(info: string, day: Day, targetDate: Date) {
+    const tokens = await prisma.userNotificationToken.findMany();
 
-    } catch (error) {
-        console.error("Error fetching or parsing the HTML:", error);
-        throw error
+    if (tokens.length === 0) {
+        return;
     }
+
+    // TODO: notification id missing
+    const message: MulticastMessage = {
+        tokens: tokens.map(row => row.token),
+        data: {
+            title: `Info für ${relativeDateFormatter(targetDate)}`,
+            body: info,
+            channel_id: CHANNEL_NAMES.CHANNEL_VP_UPDATES, // TODO: improve this
+            id: `vpinfo ${day}`
+        }
+    };
+
+    await messaging.sendEachForMulticast(message);
 }

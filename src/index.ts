@@ -19,7 +19,7 @@ app.use(express.json());
 app.use(requestLogger);
 
 app.use(express.static("src/public")); // TODO: geht nur weil src noch da ist, wird aber nicht in dist kopiert
-app.use("/api/v1", v1Routes);
+app.use("/v1", v1Routes);
 
 app.listen(port, () => {
     console.log(`server listening on http://localhost:${port}`);
