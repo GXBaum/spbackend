@@ -7,6 +7,7 @@ import {parseVpHtml} from "./vpScraperParser.js";
 import {Prisma, type VpSubstitution} from "../generated/prisma/client.js";
 import {buildDeepLink, CHANNEL_NAMES} from "./DeepLinkBuilder.js";
 import {relativeDateFormatter} from "./DateFormatter.js";
+import {logger} from "../logger.js";
 
 export async function scrapeVp(day: Day) {
     const dayNumber = day === Day.today ? 1 : 2;
@@ -16,10 +17,18 @@ export async function scrapeVp(day: Day) {
 
     // FIXME UNCOMMENT
     if (!(await hasVpChanged(day, html))) {
-        console.log(`no changes for ${day}`);
+        logger.info({day}, "VP data has not changed");
         return;
     }
-    console.log(`changes for ${day}`);
+    logger.info({day}, "VP data changed");
+
+    // FIXME: can lead to missed entries if it failes downrange
+    await prisma.vpRawLog.create({
+        data: {
+            data: html,
+            day: day
+        }
+    });
 
     const data = parseVpHtml(html);
 
@@ -110,11 +119,7 @@ export async function scrapeVp(day: Day) {
         skipDuplicates: true
     });
 
-    console.log(oldSubstitutions.length);
-    console.log(allSubstitutions.length);
-
     const deleted = findDeletedSubstitutions(oldSubstitutions, allSubstitutions);
-    console.log("GELÖSCHT??? ", deleted);
 
     const deletedRows = await prisma.vpSubstitution.updateManyAndReturn({
         where: {
@@ -129,9 +134,17 @@ export async function scrapeVp(day: Day) {
             isDeleted: true
         }
     });
-    console.log(deletedRows);
 
     const newSubstitutions = findNewSubstitutions(oldSubstitutions, allSubstitutions);
+
+    logger.info({
+        day,
+        targetDate: data.targetDateTest,
+        oldCount: oldSubstitutions.length,
+        foundCount: allSubstitutions.length,
+        newCount: newSubstitutions.length,
+        deletedCount: deleted.length
+    });
 
     /*
     const updatedCourses = new Set([
@@ -150,7 +163,6 @@ export async function scrapeVp(day: Day) {
             .filter(sub => sub.VpType === VpType.substitution)
             .map(sub => sub.course.name)
     ]);
-    console.log(updatedSubstitutionCourses);
     const updatedDifferentRoomCourses = new Set([
         ...newSubstitutions
             .filter(sub => sub.VpType === VpType.differentRoom)
@@ -159,33 +171,23 @@ export async function scrapeVp(day: Day) {
             .filter(sub => sub.VpType === VpType.differentRoom)
             .map(sub => sub.course.name)
     ]);
-    console.log(updatedDifferentRoomCourses);
 
     //for (const course of updatedCourses) {
     for (const course of updatedSubstitutionCourses) {
-        console.log(course);
         try {
             await sendCourseNotification(course, VpType.substitution, day, data.targetDateTest);
         } catch (error) {
-            console.error(`Notification failed for course ${course}: ${error}`);
+            logger.error({err: error, course, type: VpType.substitution}, "VP Notification failed");
         }
     }
     for (const course of updatedDifferentRoomCourses) {
-        console.log(course);
         try {
             await sendCourseNotification(course, VpType.differentRoom, day, data.targetDateTest);
         } catch (error) {
-            console.error(`Notification failed for course ${course}: ${error}`);
+            logger.error({err: error, course, type: VpType.differentRoom}, "VP Notification failed");
         }
     }
 
-
-    await prisma.vpRawLog.create({
-        data: {
-            data: html,
-            day: day
-        }
-    });
 }
 
 // seems like an unnecessary function

@@ -1,5 +1,6 @@
 import type {NextFunction, Request, Response} from "express";
 import jwt from "jsonwebtoken";
+import {logger} from "../logger.js";
 
 export const authenticateToken = (req: Request, res: Response, next: NextFunction) => {
     const authHeader = req.headers["authorization"];
@@ -21,12 +22,12 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
             return res.sendStatus(401);
         }
 
-        console.log(user);
+        logger.debug({user});
 
         req.user = user as NonNullable<Request["user"]>;
         next();
     } catch (error) {
-        console.error(error);
+        logger.error({err: error}, "auth failed");
         return res.sendStatus(401);
     }
 

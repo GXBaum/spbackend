@@ -3,6 +3,7 @@ import v1Routes from "./routes/v1/index.js"
 import {requestLogger} from "./middleware/requestLogger.js";
 import {scrapeVp} from "./services/vpScraperService.js";
 import {Day} from "./generated/prisma/enums.js";
+import {logger} from "./logger.js";
 
 const app: Application = express();
 const port = 3000;
@@ -26,18 +27,18 @@ app.use(express.static("dist/public", {
 app.use("/v1", v1Routes);
 
 app.listen(port, () => {
-    console.log(`server listening on http://localhost:${port}`);
+    logger.info({port}, "server listening");
 
     // TODO move this?
     setInterval(async () => {
         try {
             await scrapeVp(Day.today);
-            console.log("Scraped today");
+            logger.info({day: Day.today}, "VP scraped");
 
             await scrapeVp(Day.tomorrow);
-            console.log("Scraped tomorrow");
-        } catch {
-            console.log("scrape failed");
+            logger.info({day: Day.tomorrow}, "VP scraped");
+        } catch (error) {
+            logger.warn({err: error}, "VP scrape failed");
         }
     }, 10_000)
 });

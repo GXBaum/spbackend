@@ -3,6 +3,7 @@ import {scrapeVp} from "../services/vpScraperService.js";
 import {Day} from "../generated/prisma/enums.js";
 import {prisma} from "../db/prisma.js";
 import {Prisma} from "../generated/prisma/client.js";
+import {logger} from "../logger.js";
 
 function castAsDay(value: any): Day | null {
     if( Object.values(Day).includes(value) ) {
@@ -43,7 +44,7 @@ export const getSubstitutions = async (req: Request, res: Response): Promise<voi
             infos: true
         }
     });
-    console.log(days);
+    logger.debug({days});
 
     whereStatement.targetDate = { in: days.map(day => day.targetDate) }
 

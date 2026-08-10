@@ -1,6 +1,7 @@
 import * as cheerio from "cheerio";
 import {parse} from "date-fns";
 import {de} from "date-fns/locale/de";
+import { logger } from "../logger.js";
 
 export interface VpSubstitution {
     hour: string;
@@ -75,7 +76,7 @@ export function parseVpHtml(html: string, timestamp = new Date()): VpData {
             if (nextElement.is("table") && (nextSibling === null || isWhitespace)) {
                 if (differentRoomsTable && nextElement.is(differentRoomsTable)) {
                     // Skip this table because it's the Ersatzraumplan table
-                    console.log("no substitutions table")
+                    logger.debug("substitutions table not found");
                     return;
                 }
                 result = nextElement;
@@ -168,7 +169,7 @@ export function parseVpHtml(html: string, timestamp = new Date()): VpData {
     // vp uses: Jan, Feb, Mrz, Apr, Mai, Jun, Jul, Aug, Sep, Okt, Nov, Dez
     const localTime = parse(websiteDate.replace("Mrz", "Mär"), formatString, new Date(), {locale: de});
     const targetDate = new Date(Date.UTC(localTime.getFullYear(), localTime.getMonth(), localTime.getDate())); // otherwise it would be offset by -2 hours in germany local time and show the wrong date
-    console.log(targetDate);
+    logger.debug({targetDate});
 
 
     // TODO: remove this
