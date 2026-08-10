@@ -2,6 +2,9 @@ import type {Request, Response} from "express";
 import {prisma} from "../db/prisma.js";
 import * as z from "zod";
 import {signAccessToken} from "./authController.js";
+import {logger} from "../logger.js";
+
+const log = logger.child({ service: "migration" });
 
 const vpCourseSchema = z.object({
     course: z.string(),
@@ -40,11 +43,6 @@ const migrationRequestQuery = z.object({
 });
 
 export const getDevV1 = async (req: Request, res: Response) => {
-    /*
-    const authHeader = req.headers['authorization'];
-    if (!authHeader) return res.sendStatus(401)
-    */
-    //console.log(authHeader)
 
     const parsedParams = migrationRequestParams.safeParse(req.params)
     if (!parsedParams.success) return res.sendStatus(400)
@@ -55,7 +53,7 @@ export const getDevV1 = async (req: Request, res: Response) => {
     const userIdOld = parsedParams.data.userIdOld
     const refreshTokenInRequest = parsedQuery.data.refreshTokenInRequest
 
-    console.log(`user ${userIdOld} is migrating...`)
+    log.info({userIdOld}, "migration started");
 
     // TODO: disable notifications on old server after migration
     const params = new URLSearchParams({
@@ -72,18 +70,16 @@ export const getDevV1 = async (req: Request, res: Response) => {
         */
     )
     if (!response.ok) {
-        console.log("Failed to fetch migration data: ", await response.text())
+        log.error({userIdOld, status: response.status}, "failed to fetch migration data");
         return res.sendStatus(response.status)
     }
 
-    console.log("Received migration data")
-
     const rawData = await response.json(); // TODO: ts doesn't work
-    console.log(rawData)
+    log.debug({rawData});
     const parsedData = await GetMigrationResponseSchema.safeParseAsync(rawData);
 
     if (!parsedData.success) {
-        console.log("Failed to parse migration data: ", parsedData.error)
+        log.error({userIdOld, err: parsedData.error}, "failed to parse migration data");
         return res.sendStatus(500)
     }
     const data = parsedData.data.data
@@ -124,7 +120,12 @@ export const getDevV1 = async (req: Request, res: Response) => {
         }
     });
 
-    console.log(`${userIdOld}: ${user}`);
+    log.info({
+        userIdOld,
+        userId: user.id,
+        courseCount: data.courses.length,
+        tokenCount: data.notificationTokens.length,
+    }, "migration completed");
 
     const token = signAccessToken(user.id);
 

@@ -5,6 +5,8 @@ import {prisma} from "../db/prisma.js";
 import {Prisma} from "../generated/prisma/client.js";
 import {logger} from "../logger.js";
 
+const log = logger.child({ service: "substitutionsController" });
+
 function castAsDay(value: any): Day | null {
     if( Object.values(Day).includes(value) ) {
         return value as Day
@@ -44,7 +46,7 @@ export const getSubstitutions = async (req: Request, res: Response): Promise<voi
             infos: true
         }
     });
-    logger.debug({days});
+    log.debug({days});
 
     whereStatement.targetDate = { in: days.map(day => day.targetDate) }
 

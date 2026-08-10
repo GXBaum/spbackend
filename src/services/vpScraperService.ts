@@ -9,6 +9,8 @@ import {buildDeepLink, CHANNEL_NAMES} from "./DeepLinkBuilder.js";
 import {relativeDateFormatter} from "./DateFormatter.js";
 import {logger} from "../logger.js";
 
+const log = logger.child({ service: "vp-scraper" });
+
 export async function scrapeVp(day: Day) {
     const dayNumber = day === Day.today ? 1 : 2;
     const url = `https://www.kleist-schule.de/vertretungsplan/schueler/aktuelle%20plaene/${dayNumber}/vp.html`;
@@ -17,10 +19,10 @@ export async function scrapeVp(day: Day) {
 
     // FIXME UNCOMMENT
     if (!(await hasVpChanged(day, html))) {
-        logger.info({day}, "VP data has not changed");
+        log.debug({day}, "VP data has not changed");
         return;
     }
-    logger.info({day}, "VP data changed");
+    log.info({day}, "VP data changed");
 
     // FIXME: can lead to missed entries if it failes downrange
     await prisma.vpRawLog.create({
@@ -137,14 +139,14 @@ export async function scrapeVp(day: Day) {
 
     const newSubstitutions = findNewSubstitutions(oldSubstitutions, allSubstitutions);
 
-    logger.info({
+    log.info({
         day,
         targetDate: data.targetDateTest,
         oldCount: oldSubstitutions.length,
         foundCount: allSubstitutions.length,
         newCount: newSubstitutions.length,
         deletedCount: deleted.length
-    });
+    }, "VP scrape summary");
 
     /*
     const updatedCourses = new Set([
@@ -177,14 +179,14 @@ export async function scrapeVp(day: Day) {
         try {
             await sendCourseNotification(course, VpType.substitution, day, data.targetDateTest);
         } catch (error) {
-            logger.error({err: error, course, type: VpType.substitution}, "VP Notification failed");
+            log.error({err: error, course, type: VpType.substitution}, "VP Notification failed");
         }
     }
     for (const course of updatedDifferentRoomCourses) {
         try {
             await sendCourseNotification(course, VpType.differentRoom, day, data.targetDateTest);
         } catch (error) {
-            logger.error({err: error, course, type: VpType.differentRoom}, "VP Notification failed");
+            log.error({err: error, course, type: VpType.differentRoom}, "VP Notification failed");
         }
     }
 

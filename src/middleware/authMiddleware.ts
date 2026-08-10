@@ -2,6 +2,8 @@ import type {NextFunction, Request, Response} from "express";
 import jwt from "jsonwebtoken";
 import {logger} from "../logger.js";
 
+const log = logger.child({ service: "auth" });
+
 export const authenticateToken = (req: Request, res: Response, next: NextFunction) => {
     const authHeader = req.headers["authorization"];
     const token = authHeader?.split(" ")[1]
@@ -9,6 +11,7 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
 
     const secret = process.env.JWT_SECRET;
     if (!secret) {
+        log.fatal("Missing JWT_SECRET env variable");
         throw new Error("Missing JWT_SECRET env variable") // TODO: should this throw? maybe? i don't know
     }
 
@@ -19,15 +22,16 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
         );
 
         if (typeof user == "string" || typeof user.id != "string"){
+            log.debug("auth rejected: invalid token payload");
             return res.sendStatus(401);
         }
 
-        logger.debug({user});
+        logger.debug({user}, "auth succeeded");
 
         req.user = user as NonNullable<Request["user"]>;
         next();
     } catch (error) {
-        logger.error({err: error}, "auth failed");
+        log.warn({err: error}, "auth failed");
         return res.sendStatus(401);
     }
 

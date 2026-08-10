@@ -2,6 +2,9 @@ import type {Request, Response} from "express";
 import {prisma} from "../db/prisma.js";
 import {scrapeSp, scrapeSpCourse} from "../services/spScraperService.js";
 import * as z from "zod";
+import {logger} from "../logger.js";
+
+const log = logger.child({ service: "sp" });
 
 const cookieSchema = z.object({
     name: z.string(),
@@ -38,9 +41,7 @@ export const postAuthCookie = async (req: Request, res: Response) => {
     const { cookies } = body.data.body
 
     const formattedCookie = formatCookiesForRequest(cookies);
-    console.log("HERE");
-    console.log(cookies);
-    console.log(formattedCookie)
+    log.info({userId: id, cookies: cookies, formattedCookie: formattedCookie}, "SP auth cookie stored");
 
     const result = await prisma.userSpData.upsert({
         where: {
@@ -101,13 +102,11 @@ export const getCourseMarks = async (req: Request, res: Response) => {
     const id = req.user?.id;
     if (!id) return res.sendStatus(401);
 
-    console.log(`after id: ${id}`)
-
     const request = await GetCourseMarksSchema.safeParseAsync(req)
     if (!request.success) return res.sendStatus(400)
     const requestData = request.data
 
-    console.log(requestData)
+    log.debug({userId: id, courseId: requestData.params.courseId}, "fetching course marks");
 
     const result = await scrapeSpCourse(id, Number(requestData.params.courseId), 2)
 
