@@ -16,7 +16,8 @@ function chunk(arr, size) {
 export function scheduleUpdates({
                                     //spCron = "* * * * *", // FIXME TODO CHANGE THIS BACK
                                     spCron = "*/5 * * * *",       // every 5 minutes
-                                    vpCron = "*/5 * * * * *",     // every 5 seconds
+                                    //vpCron = "*/5 * * * * *",     // every 5 seconds
+                                    vpCron = "*/5 * * * *",     // every 5 minutes
                                     concurrentUpdates = parseInt(process.env.CONCURRENT_UPDATES || "3", 10),
                                     schoolId = 6078,
                                     userRepository = createDefaultUserRepository(),
