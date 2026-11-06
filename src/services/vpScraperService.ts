@@ -257,7 +257,7 @@ async function sendCourseNotification(course: string, vpType: VpType, day: Day, 
         .join("\n");
 
     // TODO: lol what is this
-    const notificationId = "vp" + course + day + vpType // FIXME doesn't differentiate between substitution and rooms
+    const notificationTag = "vp" + course + day + vpType // FIXME doesn't differentiate between substitution and rooms
 
     const tokens = await prisma.userNotificationToken.findMany({
         where: {
@@ -282,7 +282,7 @@ async function sendCourseNotification(course: string, vpType: VpType, day: Day, 
             title: title,
             body: body,
             deepLink: buildDeepLink({ path: "vpScreen", queryParams: { course: course } }),
-            id: notificationId,
+            notification_tag: notificationTag,
             channel_id: CHANNEL_NAMES.CHANNEL_VP_UPDATES, // TODO: improve this
         }
     };
@@ -303,7 +303,7 @@ async function sendInfoNotification(info: string, day: Day, targetDate: Date) {
             title: `Info für ${relativeDateFormatter(targetDate)}`,
             body: info,
             channel_id: CHANNEL_NAMES.CHANNEL_VP_UPDATES, // TODO: improve this
-            id: `vpinfo ${day}`
+            notification_tag: `vpinfo ${day}`
         }
     };
 

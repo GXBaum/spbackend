@@ -48,21 +48,31 @@ export const postRegister = async (req: Request, res: Response) => {
 };
 
 // TODO: implement FIXME
-/*export const postLogin = async (req: Request, res: Response) => {
+// TODO: temporary way to manually get my account
+export const postLogin = async (req: Request, res: Response) => {
     const { id, password } = req.body;
 
     // FIXME: doesn't make sense
-    const result = await prisma.user.findUnique({
+    const result = await prisma.user.findFirst({
         where: {
             id: id,
-            spData: {
-                spPassword: password
+            refreshTokens: {
+                some: {
+                    token: password
+                }
             }
         }
-    })
+    });
 
-    res.send(result);
-}*/
+    if (!result) {
+        return res.status(401).send({ error: "Invalid credentials" });
+    }
+
+    const token = signAccessToken(result.id);
+    const refreshToken = await createAndSaveRefreshToken(result.id);
+
+    res.send({userId: result.id, accessToken: token, refreshToken});
+}
 
 // TODO: implement
 export const postRefresh = async (req: Request, res: Response) => {

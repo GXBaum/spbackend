@@ -13,7 +13,12 @@ export const logger = pino({
             {
                 target: "pino-loki",
                 options: {
-                    host: "http://localhost:3100"
+                    host: process.env.LOKI_HOST || "http://localhost:3100",
+                    batching: true,
+                    labels: {
+                        app: "hvk-client-backend"
+                    },
+                    propsToLabels: ["service"]
                 }
             }
         ],

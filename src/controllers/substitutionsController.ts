@@ -8,7 +8,7 @@ import {logger} from "../logger.js";
 const log = logger.child({ service: "substitutionsController" });
 
 function castAsDay(value: any): Day | null {
-    if( Object.values(Day).includes(value) ) {
+    if ( Object.values(Day).includes(value) ) {
         return value as Day
     } else {
         return null

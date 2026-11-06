@@ -3,6 +3,8 @@ import {prisma} from "../db/prisma.js";
 import {scrapeSp, scrapeSpCourse} from "../services/spScraperService.js";
 import * as z from "zod";
 import {logger} from "../logger.js";
+import type {MulticastMessage} from "firebase-admin/messaging";
+import {CHANNEL_NAMES} from "../services/DeepLinkBuilder.js";
 
 const log = logger.child({ service: "sp" });
 
@@ -67,6 +69,32 @@ export const getTest = async (req: Request, res: Response) => {
 
     await scrapeSp(id)
 
+
+
+    const tokens = await prisma.userNotificationToken.findMany({
+        where: {
+            userId: id
+        }
+    })
+
+    if (tokens.length === 0) {
+        log.debug({id}, "test skipped: no notification tokens");
+        return;
+    }
+
+    const title = "test";
+    const body = Math.random().toString()
+
+    const message: MulticastMessage = {
+        tokens: tokens.map(row => row.token),
+        data: {
+            title: title,
+            body: body,
+            //notification_tag: "test"
+            channel_id: CHANNEL_NAMES.CHANNEL_VP_UPDATES, // TODO: improve this
+        }
+    }
+    await messaging.sendEachForMulticast(message)
 
 
     return res.sendStatus(200)
