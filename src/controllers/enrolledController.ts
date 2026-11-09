@@ -57,27 +57,21 @@ export const postEnrolled = async (req: Request, res: Response) => {
     res.sendStatus(201);
 }
 
-// TODO: implement
 export const deleteEnrolled = async (req: Request, res: Response) => {
-    const id = req.user?.id;
-    if (!id) return res.sendStatus(401);
+    const userId = req.user?.id;
+    if (!userId) return res.sendStatus(401);
 
     const { courseId } = req.params;
+    if (typeof courseId !== "string" || !courseId) return res.sendStatus(400);
 
-    if (!courseId) return res.sendStatus(400);
-    if (Array.isArray(courseId)) return res.sendStatus(400);
-
-    const result = await prisma.userVpCourse.delete({
+    // deleteMany to not throw when no row matches
+    const { count } = await prisma.userVpCourse.deleteMany({
         where: {
-            id: courseId
-        },
-        select: {
-            course: true,
-            createdAt: true,
-            updatedAt: true
+            id: courseId,
+            userId: userId
         }
     });
-    if (!result) return res.sendStatus(401);
 
-    res.send({result});
+    if (count === 0) return res.sendStatus(404);
+    return res.sendStatus(204);
 }
