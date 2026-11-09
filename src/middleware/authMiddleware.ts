@@ -7,7 +7,10 @@ const log = logger.child({ service: "auth" });
 export const authenticateToken = (req: Request, res: Response, next: NextFunction) => {
     const authHeader = req.headers["authorization"];
     const token = authHeader?.split(" ")[1]
-    if (!token) return res.sendStatus(401)
+    if (!token) {
+        log.info({reason: "missing_token"}, "auth rejected");
+        return res.sendStatus(401);
+    }
 
     const secret = process.env.JWT_SECRET;
     if (!secret) {
@@ -15,24 +18,23 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
         throw new Error("Missing JWT_SECRET env variable") // TODO: should this throw? maybe? i don't know
     }
 
+    let user: string | jwt.JwtPayload;
     try {
-        const user = jwt.verify(
-            token,
-            secret
-        );
-
-        if (typeof user == "string" || typeof user.id != "string"){
-            log.debug("auth rejected: invalid token payload");
-            return res.sendStatus(401);
-        }
-
-        logger.debug({user}, "auth succeeded");
-
-        req.user = user as NonNullable<Request["user"]>;
-        next();
+        user = jwt.verify(token, secret);
     } catch (error) {
-        log.warn({err: error}, "auth failed");
+        if (!(error instanceof jwt.JsonWebTokenError)) throw error;
+
+        const reason = error instanceof jwt.TokenExpiredError ? "expired_token" : "invalid_token";
+        log.info({reason}, "auth rejected");
         return res.sendStatus(401);
     }
 
+    if (typeof user !== "object" || user === null || typeof user.id !== "string") {
+        log.info({reason: "invalid_payload"}, "auth rejected");
+        return res.sendStatus(401);
+    }
+
+    log.info({id: user.id}, "auth succeeded");
+    req.user = user as NonNullable<Request["user"]>;
+    next();
 }

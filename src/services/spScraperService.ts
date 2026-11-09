@@ -17,17 +17,17 @@ export async function scrapeSp(userId: string) {
         }
     })
     if (userSpData == null) {
-        log.debug({userId}, "SP scrape skipped: no user data");
+        log.info({userId}, "SP scrape skipped: no user data");
         return;
     }
 
     const loginCookies = userSpData.spAuthCookie
     if (!loginCookies) {
-        log.debug({userId}, "SP scrape skipped: no auth cookie");
+        log.info({userId}, "SP scrape skipped: no auth cookie");
         return;
     }
     if (!loginCookies.includes("sid")) {
-        log.debug({userId}, "SP scrape skipped: invalid auth cookie");
+        log.info({userId}, "SP scrape skipped: invalid auth cookie");
         return;
     }
 
@@ -72,7 +72,7 @@ export async function scrapeSp(userId: string) {
     })
 
     if (tokens.length === 0) {
-        log.debug({userId}, "SP scrape skipped: no notification tokens");
+        log.info({userId}, "SP scrape skipped: no notification tokens");
         return;
     }
 
@@ -98,7 +98,7 @@ export async function scrapeSpCourse(userId: string, courseId: number, halb: num
         }
     })
     if (userSpData == null) {
-        log.debug({userId}, "SP course scrape skipped: no user data");
+        log.info({userId}, "SP course scrape skipped: no user data");
         return;
     }
 
@@ -125,7 +125,7 @@ export async function scrapeSpCourse(userId: string, courseId: number, halb: num
     console.log("html: " + html)
 
     const marks = parseMarks($, courseId, halb)
-    log.debug({userId, courseId, halb, markCount: marks.length}, "SP course scrape completed");
+    log.info({userId, courseId, halb, markCount: marks.length}, "SP course scrape completed");
 
     return marks;
 }
