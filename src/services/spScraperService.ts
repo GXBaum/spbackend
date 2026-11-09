@@ -1,6 +1,5 @@
-import {messaging} from "../firebase.js";
 import {prisma} from "../db/prisma.js";
-import type {MulticastMessage} from "firebase-admin/messaging";
+import {sendNotification} from "./pushNotificationService.js";
 import * as cheerio from "cheerio";
 import {parseCourses, parseMarks} from "./spScraperParser.js";
 import {logger} from "../logger.js";
@@ -78,14 +77,7 @@ export async function scrapeSp(userId: string) {
 
     const title = "test";
 
-    const message: MulticastMessage = {
-        tokens: tokens.map(row => row.token),
-        data: {
-            title: title,
-            body: body
-        }
-    }
-    await messaging.sendEachForMulticast(message)
+    await sendNotification({tokens: tokens.map(row => row.token), title, body});
     log.info({userId, courseCount: response.length, tokenCount: tokens.length}, "SP scrape completed");
 }
 

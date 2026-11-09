@@ -3,7 +3,7 @@ import {prisma} from "../db/prisma.js";
 import {scrapeSp, scrapeSpCourse} from "../services/spScraperService.js";
 import * as z from "zod";
 import {logger} from "../logger.js";
-import type {MulticastMessage} from "firebase-admin/messaging";
+import {sendNotification} from "../services/pushNotificationService.js";
 import {CHANNEL_NAMES} from "../services/DeepLinkBuilder.js";
 
 const log = logger.child({ service: "sp" });
@@ -85,16 +85,14 @@ export const getTest = async (req: Request, res: Response) => {
     const title = "test";
     const body = Math.random().toString()
 
-    const message: MulticastMessage = {
+    await sendNotification({
         tokens: tokens.map(row => row.token),
+        title,
+        body,
         data: {
-            title: title,
-            body: body,
-            //notification_tag: "test"
-            channel_id: CHANNEL_NAMES.CHANNEL_VP_UPDATES, // TODO: improve this
+            channel_id: CHANNEL_NAMES.CHANNEL_VP_UPDATES,
         }
-    }
-    await messaging.sendEachForMulticast(message)
+    });
 
 
     return res.sendStatus(200)

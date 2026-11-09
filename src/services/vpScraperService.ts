@@ -1,8 +1,7 @@
 import axios from "axios";
 import {prisma} from "../db/prisma.js";
 import {Day, VpType} from "../generated/prisma/enums.js";
-import type {MulticastMessage} from "firebase-admin/messaging";
-import {messaging} from "../firebase.js";
+import {sendNotification} from "./pushNotificationService.js";
 import {parseVpHtml} from "./vpScraperParser.js";
 import {Prisma, type VpSubstitution} from "../generated/prisma/client.js";
 import {buildDeepLink, CHANNEL_NAMES} from "./DeepLinkBuilder.js";
@@ -244,7 +243,7 @@ async function sendCourseNotification(course: string, vpType: VpType, day: Day, 
         where: {
             courseName: course,
             targetDate: targetDate,
-            isDeleted: false,
+            //isDeleted: false,
             VpType: vpType
         }
     });
@@ -253,7 +252,7 @@ async function sendCourseNotification(course: string, vpType: VpType, day: Day, 
     const title = `${course}: ${vpType === VpType.substitution ? "Vertretung" : "Ersatzraum"} ${relativeDateFormatter(targetDate)}`;
 
     const body = subs
-        .map(sub => `${sub.hour}: ${sub.original || "—"} → ${sub.replacement || "—"} ${sub.description ? `(${sub.description})` : ""}`)
+        .map(sub => `${sub.isDeleted ? "gelöscht: " : ""}${sub.hour}: ${sub.original || "—"} → ${sub.replacement || "—"} ${sub.description ? `(${sub.description})` : ""}`)
         .join("\n");
 
     // TODO: lol what is this
@@ -276,17 +275,16 @@ async function sendCourseNotification(course: string, vpType: VpType, day: Day, 
     }
 
     // FIXME: doesn't differentiate between substitution and rooms
-    const message: MulticastMessage = {
+    await sendNotification({
         tokens: tokens.map(row => row.token),
+        title,
+        body,
         data: {
-            title: title,
-            body: body,
             deepLink: buildDeepLink({ path: "vpScreen", queryParams: { course: course } }),
             notification_tag: notificationTag,
             channel_id: CHANNEL_NAMES.CHANNEL_VP_UPDATES, // TODO: improve this
         }
-    };
-    await messaging.sendEachForMulticast(message);
+    });
 }
 
 async function sendInfoNotification(info: string, day: Day, targetDate: Date) {
@@ -297,15 +295,13 @@ async function sendInfoNotification(info: string, day: Day, targetDate: Date) {
     }
 
     // TODO: notification id missing
-    const message: MulticastMessage = {
+    await sendNotification({
         tokens: tokens.map(row => row.token),
+        title: `Info für ${relativeDateFormatter(targetDate)}`,
+        body: info,
         data: {
-            title: `Info für ${relativeDateFormatter(targetDate)}`,
-            body: info,
             channel_id: CHANNEL_NAMES.CHANNEL_VP_UPDATES, // TODO: improve this
             notification_tag: `vpinfo ${day}`
         }
-    };
-
-    await messaging.sendEachForMulticast(message);
+    });
 }
