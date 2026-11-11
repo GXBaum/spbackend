@@ -65,13 +65,12 @@ export const deleteEnrolled = async (req: Request, res: Response) => {
     if (typeof courseId !== "string" || !courseId) return res.sendStatus(400);
 
     // deleteMany to not throw when no row matches
-    const { count } = await prisma.userVpCourse.deleteMany({
+    await prisma.userVpCourse.deleteMany({
         where: {
             id: courseId,
             userId: userId
         }
     });
 
-    if (count === 0) return res.sendStatus(404);
     return res.sendStatus(204);
 }
