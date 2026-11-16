@@ -54,7 +54,21 @@ export const postEnrolled = async (req: Request, res: Response) => {
         }
     });
 
-    res.sendStatus(201);
+
+    // TODO verified search is somewhat duplicated from getEnrolled
+    const verified = await prisma.vpCourse.findUnique({
+        where: {
+            name: course
+        }
+    })
+
+    res.status(201).json({
+        id: result.id,
+        course: result.course,
+        createdAt: result.createdAt,
+        updatedAt: result.updatedAt,
+        verified: verified !== null
+    })
 }
 
 export const deleteEnrolled = async (req: Request, res: Response) => {
